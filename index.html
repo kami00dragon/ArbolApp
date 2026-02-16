@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
-    <!-- Librería PeerJS para comunicación P2P -->
+    <!-- 1. Cargar Librería PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- 2. Cargar Nuestra Configuración Avanzada -->
+    <script src="p2p-config.js"></script>
     <style>
         /* --- ESTILOS GENERALES --- */
         :root {
@@ -30,7 +32,7 @@
             overflow: hidden;
         }
 
-        /* --- LAYOUT PRINCIPAL (GRID) --- */
+        /* --- LAYOUT PRINCIPAL --- */
         .app-layout {
             display: grid;
             grid-template-columns: var(--sidebar-width) 1fr;
@@ -42,7 +44,7 @@
             z-index: 10;
         }
 
-        /* --- BARRA LATERAL IZQUIERDA --- */
+        /* --- SIDEBAR --- */
         .sidebar {
             background-color: var(--wood-light);
             border-right: 5px solid var(--leaf-green);
@@ -51,12 +53,7 @@
             height: 100%;
             z-index: 20;
         }
-        .sidebar-header {
-            background-color: var(--leaf-green);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 4px solid var(--flower-pink);
-        }
+        .sidebar-header { background-color: var(--leaf-green); padding: 20px; text-align: center; border-bottom: 4px solid var(--flower-pink); }
         .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: white; }
         
         .sidebar-tabs { display: flex; background: #1b5e20; }
@@ -71,7 +68,6 @@
             border-bottom: 3px solid transparent;
         }
         .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
-
         .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
 
         /* --- FORMULARIO --- */
@@ -87,16 +83,14 @@
         }
         .btn-action:hover { background: #c2185b; }
 
-        /* --- COLUMNA DERECHA (FEED) --- */
+        /* --- FEED --- */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
         .tree-trunk { max-width: 700px; margin: 0 auto; min-height: 100vh; border-left: 8px solid var(--leaf-green); border-right: 8px solid var(--leaf-green); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         
-        /* HEADER CON BOTÓN P2P */
         .feed-header { background-color: var(--leaf-green); padding: 15px 20px; text-align: center; border-bottom: 5px solid var(--leaf-light); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;}
         .header-title h1 { margin: 0; font-size: 1.8rem; color: #fff; text-shadow: 2px 2px 0 var(--wood-dark); }
         .subtitle { font-size: 0.8rem; color: #e8f5e9; font-style: italic; margin-top: 2px; display: block;}
 
-        /* Botón P2P en Header */
         .btn-p2p-header {
             background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; font-size: 0.9rem;
         }
@@ -129,8 +123,8 @@
             border-radius: 15px;
             padding: 0;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            width: 90%;
-            max-width: 500px;
+            width: 95%;
+            max-width: 600px; /* Un poco más ancho para el log */
             background: var(--wood-light);
             color: var(--text-parchment);
         }
@@ -148,42 +142,27 @@
 
         .p2p-status-area {
             text-align: center;
-            padding: 20px;
+            padding: 10px 20px;
             background: rgba(0,0,0,0.2);
             border-bottom: 1px solid var(--border-stem);
         }
 
-        /* Instrucciones dentro del Modal */
         .p2p-instructions {
-            margin: 20px;
+            margin: 10px 20px;
             padding: 15px;
-            background: rgba(46, 125, 50, 0.1); /* Verde muy transparente */
+            background: rgba(46, 125, 50, 0.1);
             border: 1px dashed var(--leaf-light);
             border-radius: 8px;
             font-size: 0.85rem;
             color: #cfd8dc;
         }
-        .p2p-instructions h4 {
-            margin: 0 0 10px 0;
-            color: var(--leaf-light);
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-        }
-        .p2p-instructions ol {
-            margin: 0;
-            padding-left: 20px;
-        }
-        .p2p-instructions li {
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }
-        .p2p-instructions b {
-            color: #fff;
-        }
+        .p2p-instructions h4 { margin: 0 0 10px 0; color: var(--leaf-light); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+        .p2p-instructions ol { margin: 0; padding-left: 20px; }
+        .p2p-instructions li { margin-bottom: 5px; line-height: 1.3; }
+        .p2p-instructions b { color: #fff; }
 
         /* Iconos de Teléfono */
-        .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 10px; }
+        .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 5px; }
         .phone-blue { color: #2196F3; animation: ringing 1.5s infinite ease-in-out; }
         .phone-green { color: #4CAF50; }
         .phone-grey { color: #795548; }
@@ -198,8 +177,22 @@
             100% { transform: rotate(0deg); }
         }
 
-        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 400px; }
+        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 450px; }
         
+        /* Log de Diagnóstico (Nuevo) */
+        .p2p-log {
+            height: 80px;
+            background: #000;
+            border: 1px solid #555;
+            margin-bottom: 10px;
+            padding: 5px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #0f0;
+            overflow-y: auto;
+            border-radius: 4px;
+        }
+
         .chat-window {
             flex-grow: 1;
             background: #000;
@@ -314,10 +307,7 @@
                         <h1>🌳 ArbolApp</h1>
                         <span class="subtitle">Red Social Libre</span>
                     </div>
-                    <!-- Botón P2P -->
-                    <button class="btn-p2p-header" onclick="openP2P()">
-                        📞 Mensajes P2P
-                    </button>
+                    <button class="btn-p2p-header" onclick="openP2P()">📞 Mensajes P2P</button>
                 </header>
 
                 <nav class="nav-branches">
@@ -340,24 +330,26 @@
             <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
         
-        <!-- Estado de la llamada (Teléfonos) -->
         <div class="p2p-status-area">
             <div id="status-icon" class="phone-icon phone-grey">📱</div>
-            <div id="status-text" style="margin-top:10px; font-weight:bold;">Desconectado</div>
+            <div id="status-text" style="margin-top:5px; font-weight:bold;">Desconectado</div>
         </div>
 
-        <!-- NUEVAS INSTRUCCIONES -->
         <div class="p2p-instructions">
-            <h4>📞 Cómo conectarse:</h4>
+            <h4>📞 Cómo conectar:</h4>
             <ol>
                 <li>Copia tu <b>Tu ID</b> (casilla de arriba) y envíalo a tu amigo.</li>
                 <li>Pega el <b>ID de tu amigo</b> en la casilla de abajo.</li>
                 <li>Asegúrate de que ambos tengan esta ventana abierta.</li>
                 <li>Presiona <b>Llamar / Conectar</b>.</li>
             </ol>
+            <small style="color:#aaa; display:block; margin-top:5px;">Si falla, revisa el log verde abajo.</small>
         </div>
 
         <div class="p2p-body">
+            <!-- LOG DE DIAGNÓSTICO (NUEVO) -->
+            <div id="p2p-log" class="p2p-log">Esperando inicialización...</div>
+
             <!-- Área de Chat -->
             <div id="chat-window" class="chat-window"></div>
 
@@ -388,29 +380,48 @@
         let peer = null;
         let conn = null;
         let myId = null;
+        let connectionTimeout = null;
 
-        // --- INICIALIZAR PEERJS AL CARGAR LA PÁGINA ---
+        // --- FUNCIÓN DE LOG (DIAGNÓSTICO) ---
+        function logP2P(message) {
+            const logDiv = document.getElementById('p2p-log');
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message); // También a consola
+        }
+
+        // --- INICIALIZACIÓN (Carga Configuración) ---
         window.addEventListener('load', () => {
-            peer = new Peer(null, {
+            // Usamos la configuración de p2p-config.js si existe, si no, usamos defaults
+            const config = (typeof P2P_CONFIG !== 'undefined') ? P2P_CONFIG : {
+                iceServers: [{ url: 'stun:stun.l.google.com:19302' }],
                 debug: 2
-            });
+            };
+
+            logP2P("Iniciando red P2P...");
+
+            peer = new Peer(null, config);
 
             peer.on('open', (id) => {
                 myId = id;
-                console.log('Mi ID P2P:', myId);
+                logP2P("Red lista. Tu ID: " + id);
                 if(document.getElementById('my-peer-id')) {
                     document.getElementById('my-peer-id').value = myId;
                 }
             });
 
             peer.on('connection', (connection) => {
+                logP2P("Llamada entrante de: " + connection.peer);
                 handleConnection(connection);
-                alert("¡Llamada entrante! Aceptando conexión...");
+                if(document.visibilityState === 'visible') {
+                    alert("¡Llamada entrante! Aceptando conexión...");
+                }
             });
 
             peer.on('error', (err) => {
-                console.error(err);
-                alert("Error de conexión P2P: " + err.type);
+                logP2P("Error de PeerJS: " + err.type);
+                alert("Error de red P2P (" + err.type + "): Es posible que el servidor de señalización esté caído. Reintentá en unos minutos.");
             });
         });
 
@@ -420,8 +431,9 @@
             document.getElementById('p2p-modal').showModal();
             if (myId) {
                 document.getElementById('my-peer-id').value = myId;
+                setPhoneStatus('idle');
             } else {
-                document.getElementById('status-text').innerText = "Inicializando red...";
+                document.getElementById('status-text').innerText = "Inicializando...";
             }
         }
 
@@ -436,46 +448,76 @@
             alert("ID copiado al portapapeles");
         }
 
+        // --- Lógica de Conexión Robusta ---
         function connectToPeer() {
             const remoteId = document.getElementById('remote-peer-id').value.trim();
             if (!remoteId) {
                 alert("Por favor ingresa el ID del otro usuario.");
                 return;
             }
+
+            logP2P("Intentando conectar a: " + remoteId);
             setPhoneStatus('calling');
-            conn = peer.connect(remoteId);
+
+            // Establecer conexión
+            conn = peer.connect(remoteId, {
+                reliable: true // Asegura que los datos lleguen en orden
+            });
+
+            // Timeout: Si en 15 segundos no se conecta, asumimos fallo
+            connectionTimeout = setTimeout(() => {
+                if (!conn.open) {
+                    logP2P("Tiempo de espera agotado (Timeout). El otro usuario probablemente no tiene la página abierta o hay un firewall bloqueando.");
+                    setPhoneStatus('idle');
+                    alert("La conexión falló. Asegúrate de que ambos tengan la página abierta en este mismo momento y que ambos usen HTTPS (GitHub Pages).");
+                    if(conn) conn.close();
+                }
+            }, 15000);
+
             conn.on('open', () => {
+                clearTimeout(connectionTimeout);
+                logP2P("Conexión establecida.");
                 setPhoneStatus('connected');
                 enableChat(true);
-                addSystemMessage("Conexión establecida.");
+                addSystemMessage("Conectado con éxito.");
             });
+
             conn.on('data', (data) => {
                 addMessage(data, 'received');
             });
+
             conn.on('close', () => {
+                logP2P("Conexión cerrada.");
                 setPhoneStatus('idle');
                 enableChat(false);
                 addSystemMessage("La otra persona se ha desconectado.");
                 conn = null;
             });
+
             conn.on('error', (err) => {
+                logP2P("Error en la conexión: " + err.type);
                 setPhoneStatus('idle');
-                alert("Error de conexión: " + err);
+                alert("Error de conexión: " + err.type);
             });
         }
 
         function handleConnection(connection) {
-            setPhoneStatus('calling');
+            logP2P("Aceptando conexión...");
             conn = connection;
+            
             conn.on('open', () => {
+                logP2P("Llamada aceptada.");
                 setPhoneStatus('connected');
                 enableChat(true);
-                addSystemMessage("Conectado con otro árbol.");
+                addSystemMessage("Conectado.");
             });
+
             conn.on('data', (data) => {
                 addMessage(data, 'received');
             });
+
             conn.on('close', () => {
+                logP2P("Desconexión.");
                 setPhoneStatus('idle');
                 enableChat(false);
                 conn = null;
@@ -486,12 +528,13 @@
             const input = document.getElementById('msg-input');
             const text = input.value.trim();
             if (!text || !conn) return;
+            logP2P("Enviando mensaje...");
             conn.send(text);
             addMessage(text, 'sent');
             input.value = '';
         }
 
-        // --- UI HELPERS P2P ---
+        // --- UI HELPERS ---
 
         function setPhoneStatus(status) {
             const icon = document.getElementById('status-icon');
@@ -549,6 +592,7 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
+        // Enviar con Enter
         document.getElementById('msg-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 sendMessage();
