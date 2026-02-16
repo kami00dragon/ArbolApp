@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
+    <!-- Librería PeerJS para comunicación P2P -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         /* --- ESTILOS GENERALES --- */
         :root {
@@ -85,21 +87,20 @@
         }
         .btn-action:hover { background: #c2185b; }
 
-        /* --- INSTRUCCIONES --- */
-        .instruction-step { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #a5d6a7; }
-        .step-title { font-weight: bold; color: var(--leaf-light); margin-bottom: 10px; display: block; }
-        .visual-box { background: #fff; color: #333; padding: 10px; border-radius: 4px; margin: 5px 0; font-family: monospace; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
-        .icon-file { background: #eee; border: 1px solid #ccc; padding: 2px 5px; border-radius: 3px; font-size: 1.2rem; }
-        .icon-folder { background: #ffcc80; color: #8d6e63; padding: 2px 5px; border-radius: 3px; font-size: 1.2rem; }
-        .arrow-down { text-align: center; font-size: 1.5rem; color: var(--flower-pink); margin: 5px 0; line-height: 1; }
-        .code-snippet { background: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; margin-top: 5px; border-left: 3px solid var(--flower-pink); }
-
         /* --- COLUMNA DERECHA (FEED) --- */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
         .tree-trunk { max-width: 700px; margin: 0 auto; min-height: 100vh; border-left: 8px solid var(--leaf-green); border-right: 8px solid var(--leaf-green); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        .feed-header { background-color: var(--leaf-green); padding: 20px; text-align: center; border-bottom: 5px solid var(--leaf-light); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        h1 { margin: 0; font-size: 2.2rem; color: #fff; text-shadow: 2px 2px 0 var(--wood-dark); }
-        .subtitle { font-size: 1rem; color: #e8f5e9; font-style: italic; margin-top: 5px; display: block;}
+        
+        /* HEADER CON BOTÓN P2P */
+        .feed-header { background-color: var(--leaf-green); padding: 15px 20px; text-align: center; border-bottom: 5px solid var(--leaf-light); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;}
+        .header-title h1 { margin: 0; font-size: 1.8rem; color: #fff; text-shadow: 2px 2px 0 var(--wood-dark); }
+        .subtitle { font-size: 0.8rem; color: #e8f5e9; font-style: italic; margin-top: 2px; display: block;}
+
+        /* Botón P2P en Header */
+        .btn-p2p-header {
+            background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; font-size: 0.9rem;
+        }
+        .btn-p2p-header:hover { background: #1976D2; }
 
         .nav-branches { display: flex; justify-content: center; background: #2e7d32; }
         .nav-btn { background: none; border: none; color: white; padding: 15px 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-bottom: 4px solid transparent; transition: all 0.3s; }
@@ -113,23 +114,110 @@
         .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; }
         .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
         .post-content { line-height: 1.6; font-size: 1rem; }
-        .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e2723; background: #000; }
+        .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e27d3; background: #000; }
         img, video { width: 100%; display: block; }
         .download-link { display: inline-block; margin-top: 10px; padding: 5px 15px; background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem; }
 
-        /* Estilo para la instrucción de feeds */
-        .feed-instruction {
-            margin-top: 30px;
-            padding: 20px;
-            border: 2px dashed var(--leaf-light);
-            border-radius: 10px;
-            text-align: center;
-            background: rgba(46, 125, 50, 0.1);
-        }
+        .feed-instruction { margin-top: 30px; padding: 20px; border: 2px dashed var(--leaf-light); border-radius: 10px; text-align: center; background: rgba(46, 125, 50, 0.1); }
         .feed-instruction h4 { margin-top: 0; color: var(--leaf-light); }
         .feed-instruction code { background: #000; padding: 2px 5px; border-radius: 3px; color: #fff; }
-
         .loading-frog { text-align: center; padding: 20px; font-size: 3rem; }
+
+        /* --- MODAL P2P --- */
+        #p2p-modal {
+            border: 4px solid var(--leaf-green);
+            border-radius: 15px;
+            padding: 0;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 500px;
+            background: var(--wood-light);
+            color: var(--text-parchment);
+        }
+        
+        #p2p-modal::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+
+        .p2p-header {
+            background: var(--leaf-green);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--flower-pink);
+        }
+
+        .p2p-status-area {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border-stem);
+        }
+
+        /* Instrucciones dentro del Modal */
+        .p2p-instructions {
+            margin: 20px;
+            padding: 15px;
+            background: rgba(46, 125, 50, 0.1); /* Verde muy transparente */
+            border: 1px dashed var(--leaf-light);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #cfd8dc;
+        }
+        .p2p-instructions h4 {
+            margin: 0 0 10px 0;
+            color: var(--leaf-light);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+        .p2p-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .p2p-instructions li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .p2p-instructions b {
+            color: #fff;
+        }
+
+        /* Iconos de Teléfono */
+        .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 10px; }
+        .phone-blue { color: #2196F3; animation: ringing 1.5s infinite ease-in-out; }
+        .phone-green { color: #4CAF50; }
+        .phone-grey { color: #795548; }
+
+        @keyframes ringing {
+            0% { transform: rotate(0deg); }
+            10% { transform: rotate(-15deg); }
+            20% { transform: rotate(15deg); }
+            30% { transform: rotate(-15deg); }
+            40% { transform: rotate(15deg); }
+            50% { transform: rotate(0deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 400px; }
+        
+        .chat-window {
+            flex-grow: 1;
+            background: #000;
+            border: 2px solid #5d4037;
+            border-radius: 8px;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            font-family: monospace;
+        }
+
+        .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
+        .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; }
+        .msg-received { background: #555; color: white; align-self: flex-start; }
+        
+        .p2p-controls { display: flex; gap: 10px; }
+        .btn-call { background: #2196F3; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; }
+        .btn-send { background: var(--flower-pink); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 0 0 50px; }
 
         @media (max-width: 900px) {
             .app-layout { grid-template-columns: 1fr; overflow-y: auto; }
@@ -190,43 +278,27 @@
             <!-- PESTAÑA: INSTRUCCIONES -->
             <div id="tab-help" class="sidebar-content" style="display: none;">
                 <p style="text-align:center; font-size:0.9rem;">Sigue estos pasos para publicar:</p>
-
                 <div class="instruction-step">
                     <span class="step-title">1. Descarga el código</span>
-                    <div class="visual-box">
-                        <span class="icon-file">📄</span> nuevo-post.json
-                    </div>
+                    <div class="visual-box"><span class="icon-file">📄</span> nuevo-post.json</div>
                     <div class="arrow-down">↓</div>
                     <small>Abre el archivo descargado con el Bloc de Notas.</small>
                 </div>
-
                 <div class="instruction-step">
                     <span class="step-title">2. Sube tu archivo multimedia</span>
                     <div style="display:flex; align-items:center; justify-content:space-between;">
-                        <div class="visual-box" style="width:45%;">
-                            <span class="icon-file">🖼️</span> mi-foto.jpg
-                        </div>
+                        <div class="visual-box" style="width:45%;"><span class="icon-file">🖼️</span> mi-foto.jpg</div>
                         <div style="font-size:1.5rem;">➡️</div>
-                        <div class="visual-box" style="width:45%; background:#ffecb3;">
-                            <span class="icon-folder">📁</span> media/
-                        </div>
+                        <div class="visual-box" style="width:45%; background:#ffecb3;"><span class="icon-folder">📁</span> media/</div>
                     </div>
                     <small>Sube el archivo (foto/video) a la carpeta 'media' en tu repositorio.</small>
                 </div>
-
                 <div class="instruction-step">
                     <span class="step-title">3. Pega en posts.json</span>
-                    <div class="visual-box">
-                        <span class="icon-folder">📁</span> posts.json
-                    </div>
+                    <div class="visual-box"><span class="icon-folder">📁</span> posts.json</div>
                     <div class="arrow-down">↓</div>
                     <small>Abre <code>posts.json</code>. Busca el corchete de apertura <code>[</code> y pega ahí tu código. ¡Asegúrate de usar comas!</small>
-                    <div class="code-snippet">[
-  { ...Pega aquí tu nuevo código... },
-  { ...código antiguo... }
-]</div>
                 </div>
-
                 <div class="instruction-step" style="border-color:var(--flower-pink);">
                     <span class="step-title">4. Guarda y Sube</span>
                     <p>Haz commit en GitHub. ¡Tu hoja nueva crecerá!</p>
@@ -238,8 +310,14 @@
         <main class="main-feed">
             <div class="tree-trunk">
                 <header class="feed-header">
-                    <h1>🌳 ArbolApp</h1>
-                    <span class="subtitle">Red Social Libre</span>
+                    <div class="header-title">
+                        <h1>🌳 ArbolApp</h1>
+                        <span class="subtitle">Red Social Libre</span>
+                    </div>
+                    <!-- Botón P2P -->
+                    <button class="btn-p2p-header" onclick="openP2P()">
+                        📞 Mensajes P2P
+                    </button>
                 </header>
 
                 <nav class="nav-branches">
@@ -255,8 +333,229 @@
 
     </div>
 
+    <!-- MODAL CHAT P2P -->
+    <dialog id="p2p-modal">
+        <div class="p2p-header">
+            <h3>📞 Chat Directo (P2P)</h3>
+            <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        
+        <!-- Estado de la llamada (Teléfonos) -->
+        <div class="p2p-status-area">
+            <div id="status-icon" class="phone-icon phone-grey">📱</div>
+            <div id="status-text" style="margin-top:10px; font-weight:bold;">Desconectado</div>
+        </div>
+
+        <!-- NUEVAS INSTRUCCIONES -->
+        <div class="p2p-instructions">
+            <h4>📞 Cómo conectarse:</h4>
+            <ol>
+                <li>Copia tu <b>Tu ID</b> (casilla de arriba) y envíalo a tu amigo.</li>
+                <li>Pega el <b>ID de tu amigo</b> en la casilla de abajo.</li>
+                <li>Asegúrate de que ambos tengan esta ventana abierta.</li>
+                <li>Presiona <b>Llamar / Conectar</b>.</li>
+            </ol>
+        </div>
+
+        <div class="p2p-body">
+            <!-- Área de Chat -->
+            <div id="chat-window" class="chat-window"></div>
+
+            <!-- Controles -->
+            <div style="margin-bottom: 10px;">
+                <label style="font-size:0.8rem; color:#aaa;">Tu ID:</label>
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="my-peer-id" readonly style="flex:1; background:#222; border:1px solid #555; color:#fff; padding:5px; font-family:monospace;">
+                    <button onclick="copyMyId()" style="cursor:pointer;">📋</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label style="font-size:0.8rem; color:#aaa;">Conectar con ID del otro:</label>
+                <input type="text" id="remote-peer-id" placeholder="Pega el ID aquí...">
+            </div>
+
+            <div class="p2p-controls">
+                <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Llamar / Conectar</button>
+                <input type="text" id="msg-input" placeholder="Escribe un mensaje..." disabled>
+                <button class="btn-send" id="btn-send" onclick="sendMessage()" disabled>➤</button>
+            </div>
+        </div>
+    </dialog>
+
     <script>
-        // --- SIDEBAR TABS ---
+        // --- VARIABLES P2P ---
+        let peer = null;
+        let conn = null;
+        let myId = null;
+
+        // --- INICIALIZAR PEERJS AL CARGAR LA PÁGINA ---
+        window.addEventListener('load', () => {
+            peer = new Peer(null, {
+                debug: 2
+            });
+
+            peer.on('open', (id) => {
+                myId = id;
+                console.log('Mi ID P2P:', myId);
+                if(document.getElementById('my-peer-id')) {
+                    document.getElementById('my-peer-id').value = myId;
+                }
+            });
+
+            peer.on('connection', (connection) => {
+                handleConnection(connection);
+                alert("¡Llamada entrante! Aceptando conexión...");
+            });
+
+            peer.on('error', (err) => {
+                console.error(err);
+                alert("Error de conexión P2P: " + err.type);
+            });
+        });
+
+        // --- FUNCIONES P2P ---
+
+        function openP2P() {
+            document.getElementById('p2p-modal').showModal();
+            if (myId) {
+                document.getElementById('my-peer-id').value = myId;
+            } else {
+                document.getElementById('status-text').innerText = "Inicializando red...";
+            }
+        }
+
+        function closeP2P() {
+            document.getElementById('p2p-modal').close();
+        }
+
+        function copyMyId() {
+            const idField = document.getElementById('my-peer-id');
+            idField.select();
+            document.execCommand('copy');
+            alert("ID copiado al portapapeles");
+        }
+
+        function connectToPeer() {
+            const remoteId = document.getElementById('remote-peer-id').value.trim();
+            if (!remoteId) {
+                alert("Por favor ingresa el ID del otro usuario.");
+                return;
+            }
+            setPhoneStatus('calling');
+            conn = peer.connect(remoteId);
+            conn.on('open', () => {
+                setPhoneStatus('connected');
+                enableChat(true);
+                addSystemMessage("Conexión establecida.");
+            });
+            conn.on('data', (data) => {
+                addMessage(data, 'received');
+            });
+            conn.on('close', () => {
+                setPhoneStatus('idle');
+                enableChat(false);
+                addSystemMessage("La otra persona se ha desconectado.");
+                conn = null;
+            });
+            conn.on('error', (err) => {
+                setPhoneStatus('idle');
+                alert("Error de conexión: " + err);
+            });
+        }
+
+        function handleConnection(connection) {
+            setPhoneStatus('calling');
+            conn = connection;
+            conn.on('open', () => {
+                setPhoneStatus('connected');
+                enableChat(true);
+                addSystemMessage("Conectado con otro árbol.");
+            });
+            conn.on('data', (data) => {
+                addMessage(data, 'received');
+            });
+            conn.on('close', () => {
+                setPhoneStatus('idle');
+                enableChat(false);
+                conn = null;
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if (!text || !conn) return;
+            conn.send(text);
+            addMessage(text, 'sent');
+            input.value = '';
+        }
+
+        // --- UI HELPERS P2P ---
+
+        function setPhoneStatus(status) {
+            const icon = document.getElementById('status-icon');
+            const text = document.getElementById('status-text');
+            if (status === 'idle') {
+                icon.className = 'phone-icon phone-grey';
+                text.innerText = "Desconectado";
+            } else if (status === 'calling') {
+                icon.className = 'phone-icon phone-blue';
+                text.innerText = "Conectando...";
+            } else if (status === 'connected') {
+                icon.className = 'phone-icon phone-green';
+                text.innerText = "En línea";
+            }
+        }
+
+        function enableChat(enabled) {
+            const btnConnect = document.getElementById('btn-connect');
+            const inputMsg = document.getElementById('msg-input');
+            const btnSend = document.getElementById('btn-send');
+            if (enabled) {
+                btnConnect.disabled = true;
+                btnConnect.innerText = "Conectado";
+                btnConnect.style.background = "#4CAF50";
+                inputMsg.disabled = false;
+                btnSend.disabled = false;
+                inputMsg.focus();
+            } else {
+                btnConnect.disabled = false;
+                btnConnect.innerText = "📞 Llamar / Conectar";
+                btnConnect.style.background = "#2196F3";
+                inputMsg.disabled = true;
+                btnSend.disabled = true;
+            }
+        }
+
+        function addMessage(text, type) {
+            const chatWindow = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.className = `message msg-${type}`;
+            div.innerText = text;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+            const chatWindow = document.getElementById('chat-window');
+            const div = document.createElement('div');
+            div.style.textAlign = 'center';
+            div.style.color = '#aaa';
+            div.style.fontSize = '0.8rem';
+            div.style.margin = '10px 0';
+            div.innerText = `--- ${text} ---`;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        document.getElementById('msg-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // --- CÓDIGO EXISTENTE (SIDEBAR Y FEED) ---
         function switchSidebarTab(tabName) {
             document.querySelectorAll('.sidebar-content').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -264,7 +563,6 @@
             event.target.classList.add('active');
         }
 
-        // --- GENERADOR JSON ---
         function generateJsonFile() {
             const title = document.getElementById('post-title').value.trim();
             const content = document.getElementById('post-content').value.trim();
@@ -299,8 +597,6 @@
             alert("Archivo descargado. Abre 'Cómo Usar' para ver los siguientes pasos.");
         }
 
-        // --- FEED LOGIC ---
-        // Actualizado: RT eliminado, Perfil corregido
         const FOLLOWING_SOURCES = [
             { name: 'Perfil', url: 'https://www.perfil.com/feed/' },
             { name: 'Defonline', url: 'https://defonline.com.ar/feed/' },
@@ -326,12 +622,10 @@
                 const response = await fetch('posts.json');
                 const posts = await response.json();
                 container.innerHTML = '';
-                
                 if (posts.length === 0) {
                      container.innerHTML = `<div style="text-align:center; padding:20px;">El bosque está tranquilo. ¡Crea tu primera hoja!</div>`;
                      return;
                 }
-
                 posts.sort((a, b) => new Date(b.date) - new Date(a.date));
                 posts.forEach(post => container.appendChild(createPostCard(post, true)));
             } catch (error) {
@@ -339,18 +633,14 @@
             }
         }
 
-        // Renombrado de loadForest a loadBranches
         async function loadBranches() {
             const container = document.getElementById('feed-container');
             container.innerHTML = '';
-
             for (const source of FOLLOWING_SOURCES) {
-                // Header: "Hojas de la rama: [Nombre]"
                 const sourceHeader = document.createElement('h3');
                 sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0;";
                 sourceHeader.innerText = `🍃 Hojas de la rama: ${source.name}`;
                 container.appendChild(sourceHeader);
-                
                 try {
                     const proxy = 'https://api.rss2json.com/v1/api.json?rss_url=';
                     const res = await fetch(proxy + encodeURIComponent(source.url));
@@ -363,19 +653,11 @@
                     }
                 } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error cargando la rama ${source.name}</div>`; }
             }
-
-            // Instrucción para agregar más feeds
             const instructionBox = document.createElement('div');
             instructionBox.className = 'feed-instruction';
             instructionBox.innerHTML = `
                 <h4>🌿 ¿Quieres agregar más Ramas?</h4>
-                <p style="font-size:0.9rem; color:#cfd8dc;">
-                    Para agregar más periódicos o blogs, abre el archivo <code>index.html</code> en tu editor.<br><br>
-                    Busca la variable <code>FOLLOWING_SOURCES</code> dentro del script y añade una línea nueva con el nombre y la URL del RSS:
-                </p>
-                <div class="code-snippet" style="text-align:left; background:#000; color:#fff;">
-{ name: 'Nombre Blog', url: 'https://sitio.com/feed' },
-                </div>
+                <p style="font-size:0.9rem; color:#cfd8dc;">Para agregar más periódicos o blogs, abre el archivo <code>index.html</code> y busca la variable <code>FOLLOWING_SOURCES</code>.</p>
             `;
             container.appendChild(instructionBox);
         }
