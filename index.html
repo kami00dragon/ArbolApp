@@ -25,7 +25,7 @@
             background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px);
             color: var(--text-parchment);
             height: 100vh;
-            overflow: hidden; /* El scroll lo manejan los contenedores internos */
+            overflow: hidden;
         }
 
         /* --- LAYOUT PRINCIPAL (GRID) --- */
@@ -36,28 +36,27 @@
             max-width: 1600px;
             margin: 0 auto;
             background-color: rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 10;
         }
 
-        /* --- BARRA LATERAL IZQUIERDA (PUBLICAR) --- */
+        /* --- BARRA LATERAL IZQUIERDA --- */
         .sidebar {
             background-color: var(--wood-light);
             border-right: 5px solid var(--leaf-green);
             display: flex;
             flex-direction: column;
             height: 100%;
-            z-index: 50;
+            z-index: 20;
         }
-
         .sidebar-header {
             background-color: var(--leaf-green);
             padding: 20px;
             text-align: center;
             border-bottom: 4px solid var(--flower-pink);
         }
-
         .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: white; }
         
-        /* Pestañas del Sidebar */
         .sidebar-tabs { display: flex; background: #1b5e20; }
         .tab-btn {
             flex: 1;
@@ -71,152 +70,55 @@
         }
         .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
 
-        .sidebar-content {
-            padding: 20px;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
+        .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
 
-        /* --- FORMULARIO DE PUBLICACIÓN --- */
+        /* --- FORMULARIO --- */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ffcc80; }
         .form-group input, .form-group textarea, .form-group select {
-            width: 100%;
-            padding: 10px;
-            background: #3e2723;
-            border: 1px solid #795548;
-            color: #efebe9;
-            border-radius: 4px;
-            font-family: inherit;
-            box-sizing: border-box;
+            width: 100%; padding: 10px; background: #3e2723; border: 1px solid #795548; color: #efebe9; border-radius: 4px; font-family: inherit; box-sizing: border-box;
         }
         .form-group textarea { resize: vertical; min-height: 100px; }
         
         .btn-action {
-            width: 100%;
-            padding: 12px;
-            background: var(--flower-pink);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
+            width: 100%; padding: 12px; background: var(--flower-pink); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: background 0.2s;
         }
         .btn-action:hover { background: #c2185b; }
 
-        /* --- INSTRUCCIONES GRÁFICAS --- */
-        .instruction-step {
-            background: rgba(0,0,0,0.2);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px dashed #a5d6a7;
-        }
+        /* --- INSTRUCCIONES --- */
+        .instruction-step { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px dashed #a5d6a7; }
         .step-title { font-weight: bold; color: var(--leaf-light); margin-bottom: 10px; display: block; }
-        
-        .visual-box {
-            background: #fff;
-            color: #333;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 5px 0;
-            font-family: monospace;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
-        }
+        .visual-box { background: #fff; color: #333; padding: 10px; border-radius: 4px; margin: 5px 0; font-family: monospace; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
         .icon-file { background: #eee; border: 1px solid #ccc; padding: 2px 5px; border-radius: 3px; font-size: 1.2rem; }
         .icon-folder { background: #ffcc80; color: #8d6e63; padding: 2px 5px; border-radius: 3px; font-size: 1.2rem; }
-        
         .arrow-down { text-align: center; font-size: 1.5rem; color: var(--flower-pink); margin: 5px 0; line-height: 1; }
-        .code-snippet {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            white-space: pre-wrap;
-            margin-top: 5px;
-            border-left: 3px solid var(--flower-pink);
-        }
+        .code-snippet { background: #2d2d2d; color: #f8f8f2; padding: 10px; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; margin-top: 5px; border-left: 3px solid var(--flower-pink); }
 
         /* --- COLUMNA DERECHA (FEED) --- */
-        .main-feed {
-            background-color: rgba(62, 39, 35, 0.95);
-            overflow-y: auto;
-            height: 100vh;
-            border-left: 8px solid var(--wood-dark);
-            position: relative;
-        }
-
-        .tree-trunk {
-            max-width: 700px;
-            margin: 0 auto;
-            min-height: 100vh;
-            border-left: 8px solid var(--leaf-green);
-            border-right: 8px solid var(--leaf-green);
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        /* Header del Feed */
-        .feed-header {
-            background-color: var(--leaf-green);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 5px solid var(--leaf-light);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
+        .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
+        .tree-trunk { max-width: 700px; margin: 0 auto; min-height: 100vh; border-left: 8px solid var(--leaf-green); border-right: 8px solid var(--leaf-green); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .feed-header { background-color: var(--leaf-green); padding: 20px; text-align: center; border-bottom: 5px solid var(--leaf-light); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         h1 { margin: 0; font-size: 2.2rem; color: #fff; text-shadow: 2px 2px 0 var(--wood-dark); }
         .subtitle { font-size: 1rem; color: #e8f5e9; font-style: italic; margin-top: 5px; display: block;}
 
-        /* Navegación del Feed */
         .nav-branches { display: flex; justify-content: center; background: #2e7d32; }
-        .nav-btn {
-            background: none; border: none; color: white;
-            padding: 15px 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
-            border-bottom: 4px solid transparent; transition: all 0.3s;
-        }
+        .nav-btn { background: none; border: none; color: white; padding: 15px 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-bottom: 4px solid transparent; transition: all 0.3s; }
         .nav-btn:hover { background-color: rgba(255,255,255,0.1); }
         .nav-btn.active { border-bottom-color: var(--flower-pink); background-color: rgba(0,0,0,0.1); }
 
-        /* Tarjetas de Posts */
         #feed-container { padding: 20px; }
-        .leaf-card {
-            background-color: var(--wood-light);
-            border-radius: 5px 30px 5px 30px;
-            padding: 20px; margin-bottom: 25px;
-            border: 2px solid var(--border-stem);
-            position: relative; box-shadow: 5px 5px 0px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
-        }
+        .leaf-card { background-color: var(--wood-light); border-radius: 5px 30px 5px 30px; padding: 20px; margin-bottom: 25px; border: 2px solid var(--border-stem); position: relative; box-shadow: 5px 5px 0px rgba(0,0,0,0.2); transition: transform 0.2s; }
         .leaf-card:hover { transform: translateY(-3px); }
-        .leaf-card::before {
-            content: '🌿'; position: absolute; top: -15px; left: -10px;
-            font-size: 1.5rem; transform: rotate(-20deg);
-        }
+        .leaf-card::before { content: '🌿'; position: absolute; top: -15px; left: -10px; font-size: 1.5rem; transform: rotate(-20deg); }
         .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; }
         .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
         .post-content { line-height: 1.6; font-size: 1rem; }
         .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e2723; background: #000; }
         img, video { width: 100%; display: block; }
-        .download-link {
-            display: inline-block; margin-top: 10px; padding: 5px 15px;
-            background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem;
-        }
+        .download-link { display: inline-block; margin-top: 10px; padding: 5px 15px; background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem; }
 
-        /* Gato */
-        .cat-deco { position: fixed; bottom: 20px; right: 20px; width: 100px; height: 100px; border-radius: 50%; border: 4px solid #fff; background-color: #fff; object-fit: cover; z-index: 200; animation: floatCat 3s ease-in-out infinite; }
-        @keyframes floatCat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .loading-frog { text-align: center; padding: 20px; font-size: 3rem; }
 
-        /* Responsivo */
         @media (max-width: 900px) {
             .app-layout { grid-template-columns: 1fr; overflow-y: auto; }
             .sidebar { height: auto; max-height: 80vh; }
@@ -228,12 +130,9 @@
 </head>
 <body>
 
-    <!-- Decoración Gato -->
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Calico_cat.jpg/220px-Calico_cat.jpg" alt="Gato Calico" class="cat-deco">
-
     <div class="app-layout">
         
-        <!-- === BARRA LATERAL (PUBLICAR) === -->
+        <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🌱 Estación de Crecimiento</h2>
@@ -276,11 +175,10 @@
                 <p style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-top:10px;">Esto descarga un archivo .json con tu post.</p>
             </div>
 
-            <!-- PESTAÑA: INSTRUCCIONES GRÁFICAS -->
+            <!-- PESTAÑA: INSTRUCCIONES -->
             <div id="tab-help" class="sidebar-content" style="display: none;">
                 <p style="text-align:center; font-size:0.9rem;">Sigue estos pasos para publicar:</p>
 
-                <!-- PASO 1 -->
                 <div class="instruction-step">
                     <span class="step-title">1. Descarga el código</span>
                     <div class="visual-box">
@@ -290,7 +188,6 @@
                     <small>Abre el archivo descargado con el Bloc de Notas.</small>
                 </div>
 
-                <!-- PASO 2 -->
                 <div class="instruction-step">
                     <span class="step-title">2. Sube tu archivo multimedia</span>
                     <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -305,7 +202,6 @@
                     <small>Sube el archivo (foto/video) a la carpeta 'media' en tu repositorio.</small>
                 </div>
 
-                <!-- PASO 3 -->
                 <div class="instruction-step">
                     <span class="step-title">3. Pega en posts.json</span>
                     <div class="visual-box">
@@ -326,7 +222,7 @@
             </div>
         </aside>
 
-        <!-- === COLUMNA PRINCIPAL (FEED) === -->
+        <!-- FEED PRINCIPAL -->
         <main class="main-feed">
             <div class="tree-trunk">
                 <header class="feed-header">
@@ -348,16 +244,15 @@
     </div>
 
     <script>
-        // --- GESTIÓN DE PESTAÑAS DEL SIDEBAR ---
+        // --- SIDEBAR TABS ---
         function switchSidebarTab(tabName) {
             document.querySelectorAll('.sidebar-content').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
             document.getElementById('tab-' + tabName).style.display = 'block';
             event.target.classList.add('active');
         }
 
-        // --- GENERADOR DE JSON ---
+        // --- GENERADOR JSON ---
         function generateJsonFile() {
             const title = document.getElementById('post-title').value.trim();
             const content = document.getElementById('post-content').value.trim();
@@ -378,10 +273,7 @@
                 type: type === 'none' ? null : type
             };
 
-            // Crear string bonito del JSON
             const jsonString = JSON.stringify(newPost, null, 2);
-
-            // Crear Blob y descargar
             const blob = new Blob([jsonString], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -395,7 +287,7 @@
             alert("Archivo descargado. Abre 'Cómo Usar' para ver los siguientes pasos.");
         }
 
-        // --- LÓGICA DEL FEED (Mantenida de la versión anterior) ---
+        // --- FEED LOGIC ---
         const FOLLOWING_SOURCES = [
             { name: 'Perfil (Política)', url: 'https://www.perfil.com/rss/politica.xml' },
             { name: 'RT en Español', url: 'https://spanish.rt.com/rss/' },
@@ -422,6 +314,12 @@
                 const response = await fetch('posts.json');
                 const posts = await response.json();
                 container.innerHTML = '';
+                
+                if (posts.length === 0) {
+                     container.innerHTML = `<div style="text-align:center; padding:20px;">El bosque está tranquilo. ¡Crea tu primera hoja!</div>`;
+                     return;
+                }
+
                 posts.sort((a, b) => new Date(b.date) - new Date(a.date));
                 posts.forEach(post => container.appendChild(createPostCard(post, true)));
             } catch (error) {
@@ -432,6 +330,8 @@
         async function loadForest() {
             const container = document.getElementById('feed-container');
             container.innerHTML = '';
+
+            // El gato ha sido eliminado, aquí solo se cargan los feeds
             for (const source of FOLLOWING_SOURCES) {
                 const sourceHeader = document.createElement('h3');
                 sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0;";
@@ -483,7 +383,6 @@
             return card;
         }
 
-        // Inicializar
         document.addEventListener('DOMContentLoaded', () => loadMyPosts());
     </script>
 </body>
