@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Árbol: Red Social Libre</title>
+    <style>
+        /* --- ESTILOS GENERALES --- */
+        :root {
+            --wood-dark: #3e2723;
+            --wood-light: #5d4037;
+            --leaf-green: #2e7d32;
+            --leaf-light: #66bb6a;
+            --flower-pink: #e91e63;
+            --text-parchment: #efebe9;
+            --border-stem: #1b5e20;
+            --sidebar-width: 320px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Georgia', serif;
+            background-color: var(--wood-dark);
+            background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px);
+            color: var(--text-parchment);
+            height: 100vh;
+            overflow: hidden; /* El scroll lo manejan los contenedores internos */
+        }
+
+        /* --- LAYOUT PRINCIPAL (GRID) --- */
+        .app-layout {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        /* --- BARRA LATERAL IZQUIERDA (PUBLICAR) --- */
+        .sidebar {
+            background-color: var(--wood-light);
+            border-right: 5px solid var(--leaf-green);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 50;
+        }
+
+        .sidebar-header {
+            background-color: var(--leaf-green);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 4px solid var(--flower-pink);
+        }
+
+        .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: white; }
+        
+        /* Pestañas del Sidebar */
+        .sidebar-tabs { display: flex; background: #1b5e20; }
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: #a5d6a7;
+            padding: 15px 0;
+            cursor: pointer;
+            font-weight: bold;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
+
+        .sidebar-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        /* --- FORMULARIO DE PUBLICACIÓN --- */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ffcc80; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            background: #3e2723;
+            border: 1px solid #795548;
+            color: #efebe9;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        
+        .btn-action {
+            width: 100%;
+            padding: 12px;
+            background: var(--flower-pink);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-action:hover { background: #c2185b; }
+
+        /* --- INSTRUCCIONES GRÁFICAS --- */
+        .instruction-step {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px dashed #a5d6a7;
+        }
+        .step-title { font-weight: bold; color: var(--leaf-light); margin-bottom: 10px; display: block; }
+        
+        .visual-box {
+            background: #fff;
+            color: #333;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+        }
+        .icon-file { background: #eee; border: 1px solid #ccc; padding: 2px 5px; border-radius: 3px; font-size: 1.2rem; }
+        .icon-folder { background: #ffcc80; color: #8d6e63; padding: 2px 5px; border-radius: 3px; font-size: 1.2rem; }
+        
+        .arrow-down { text-align: center; font-size: 1.5rem; color: var(--flower-pink); margin: 5px 0; line-height: 1; }
+        .code-snippet {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            margin-top: 5px;
+            border-left: 3px solid var(--flower-pink);
+        }
+
+        /* --- COLUMNA DERECHA (FEED) --- */
+        .main-feed {
+            background-color: rgba(62, 39, 35, 0.95);
+            overflow-y: auto;
+            height: 100vh;
+            border-left: 8px solid var(--wood-dark);
+            position: relative;
+        }
+
+        .tree-trunk {
+            max-width: 700px;
+            margin: 0 auto;
+            min-height: 100vh;
+            border-left: 8px solid var(--leaf-green);
+            border-right: 8px solid var(--leaf-green);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* Header del Feed */
+        .feed-header {
+            background-color: var(--leaf-green);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 5px solid var(--leaf-light);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        h1 { margin: 0; font-size: 2.2rem; color: #fff; text-shadow: 2px 2px 0 var(--wood-dark); }
+        .subtitle { font-size: 1rem; color: #e8f5e9; font-style: italic; margin-top: 5px; display: block;}
+
+        /* Navegación del Feed */
+        .nav-branches { display: flex; justify-content: center; background: #2e7d32; }
+        .nav-btn {
+            background: none; border: none; color: white;
+            padding: 15px 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+            border-bottom: 4px solid transparent; transition: all 0.3s;
+        }
+        .nav-btn:hover { background-color: rgba(255,255,255,0.1); }
+        .nav-btn.active { border-bottom-color: var(--flower-pink); background-color: rgba(0,0,0,0.1); }
+
+        /* Tarjetas de Posts */
+        #feed-container { padding: 20px; }
+        .leaf-card {
+            background-color: var(--wood-light);
+            border-radius: 5px 30px 5px 30px;
+            padding: 20px; margin-bottom: 25px;
+            border: 2px solid var(--border-stem);
+            position: relative; box-shadow: 5px 5px 0px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .leaf-card:hover { transform: translateY(-3px); }
+        .leaf-card::before {
+            content: '🌿'; position: absolute; top: -15px; left: -10px;
+            font-size: 1.5rem; transform: rotate(-20deg);
+        }
+        .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; }
+        .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
+        .post-content { line-height: 1.6; font-size: 1rem; }
+        .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e2723; background: #000; }
+        img, video { width: 100%; display: block; }
+        .download-link {
+            display: inline-block; margin-top: 10px; padding: 5px 15px;
+            background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem;
+        }
+
+        /* Gato */
+        .cat-deco { position: fixed; bottom: 20px; right: 20px; width: 100px; height: 100px; border-radius: 50%; border: 4px solid #fff; background-color: #fff; object-fit: cover; z-index: 200; animation: floatCat 3s ease-in-out infinite; }
+        @keyframes floatCat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .loading-frog { text-align: center; padding: 20px; font-size: 3rem; }
+
+        /* Responsivo */
+        @media (max-width: 900px) {
+            .app-layout { grid-template-columns: 1fr; overflow-y: auto; }
+            .sidebar { height: auto; max-height: 80vh; }
+            body { overflow: auto; }
+            .main-feed { height: auto; overflow: visible; }
+            .tree-trunk { border: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Decoración Gato -->
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Calico_cat.jpg/220px-Calico_cat.jpg" alt="Gato Calico" class="cat-deco">
+
+    <div class="app-layout">
+        
+        <!-- === BARRA LATERAL (PUBLICAR) === -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🌱 Estación de Crecimiento</h2>
+            </div>
+            
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" onclick="switchSidebarTab('editor')">✏️ Escribir</button>
+                <button class="tab-btn" onclick="switchSidebarTab('help')">📚 Cómo Usar</button>
+            </div>
+
+            <!-- PESTAÑA: EDITOR -->
+            <div id="tab-editor" class="sidebar-content">
+                <div class="form-group">
+                    <label>Título de la Hoja</label>
+                    <input type="text" id="post-title" placeholder="Ej: Un nuevo día en el bosque">
+                </div>
+
+                <div class="form-group">
+                    <label>Contenido (Texto)</label>
+                    <textarea id="post-content" placeholder="Escribe aquí tus pensamientos..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Archivo Multimedia (Opcional)</label>
+                    <input type="text" id="post-media" placeholder="Ej: foto.jpg (solo nombre, no ruta)">
+                </div>
+
+                <div class="form-group">
+                    <label>Tipo de Archivo</label>
+                    <select id="post-type">
+                        <option value="image">Imagen (jpg, png)</option>
+                        <option value="video">Video (mp4)</option>
+                        <option value="audio">Audio (mp3)</option>
+                        <option value="document">Documento (pdf)</option>
+                        <option value="none">Solo Texto</option>
+                    </select>
+                </div>
+
+                <button class="btn-action" onclick="generateJsonFile()">⬇️ Generar y Descargar JSON</button>
+                <p style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-top:10px;">Esto descarga un archivo .json con tu post.</p>
+            </div>
+
+            <!-- PESTAÑA: INSTRUCCIONES GRÁFICAS -->
+            <div id="tab-help" class="sidebar-content" style="display: none;">
+                <p style="text-align:center; font-size:0.9rem;">Sigue estos pasos para publicar:</p>
+
+                <!-- PASO 1 -->
+                <div class="instruction-step">
+                    <span class="step-title">1. Descarga el código</span>
+                    <div class="visual-box">
+                        <span class="icon-file">📄</span> nuevo-post.json
+                    </div>
+                    <div class="arrow-down">↓</div>
+                    <small>Abre el archivo descargado con el Bloc de Notas.</small>
+                </div>
+
+                <!-- PASO 2 -->
+                <div class="instruction-step">
+                    <span class="step-title">2. Sube tu archivo multimedia</span>
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <div class="visual-box" style="width:45%;">
+                            <span class="icon-file">🖼️</span> mi-foto.jpg
+                        </div>
+                        <div style="font-size:1.5rem;">➡️</div>
+                        <div class="visual-box" style="width:45%; background:#ffecb3;">
+                            <span class="icon-folder">📁</span> media/
+                        </div>
+                    </div>
+                    <small>Sube el archivo (foto/video) a la carpeta 'media' en tu repositorio.</small>
+                </div>
+
+                <!-- PASO 3 -->
+                <div class="instruction-step">
+                    <span class="step-title">3. Pega en posts.json</span>
+                    <div class="visual-box">
+                        <span class="icon-folder">📁</span> posts.json
+                    </div>
+                    <div class="arrow-down">↓</div>
+                    <small>Abre <code>posts.json</code>. Busca el corchete de apertura <code>[</code> y pega ahí tu código. ¡Asegúrate de usar comas!</small>
+                    <div class="code-snippet">[
+  { ...Pega aquí tu nuevo código... },
+  { ...código antiguo... }
+]</div>
+                </div>
+
+                <div class="instruction-step" style="border-color:var(--flower-pink);">
+                    <span class="step-title">4. Guarda y Sube</span>
+                    <p>Haz commit en GitHub. ¡Tu hoja nueva crecerá!</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- === COLUMNA PRINCIPAL (FEED) === -->
+        <main class="main-feed">
+            <div class="tree-trunk">
+                <header class="feed-header">
+                    <h1>🌳 Árbol</h1>
+                    <span class="subtitle">Red Social Libre</span>
+                </header>
+
+                <nav class="nav-branches">
+                    <button class="nav-btn active" onclick="switchFeedTab('my-posts')">Mis Hojas</button>
+                    <button class="nav-btn" onclick="switchFeedTab('forest')">El Bosque (Seguidos)</button>
+                </nav>
+
+                <div id="feed-container">
+                    <div class="loading-frog">🐱 Cargando...</div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        // --- GESTIÓN DE PESTAÑAS DEL SIDEBAR ---
+        function switchSidebarTab(tabName) {
+            document.querySelectorAll('.sidebar-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabName).style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        // --- GENERADOR DE JSON ---
+        function generateJsonFile() {
+            const title = document.getElementById('post-title').value.trim();
+            const content = document.getElementById('post-content').value.trim();
+            const media = document.getElementById('post-media').value.trim();
+            const type = document.getElementById('post-type').value;
+
+            if (!title || !content) {
+                alert("Por favor escribe al menos un título y contenido.");
+                return;
+            }
+
+            const newPost = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                title: title,
+                content: content,
+                media: media || null,
+                type: type === 'none' ? null : type
+            };
+
+            // Crear string bonito del JSON
+            const jsonString = JSON.stringify(newPost, null, 2);
+
+            // Crear Blob y descargar
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "nuevo-post.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert("Archivo descargado. Abre 'Cómo Usar' para ver los siguientes pasos.");
+        }
+
+        // --- LÓGICA DEL FEED (Mantenida de la versión anterior) ---
+        const FOLLOWING_SOURCES = [
+            { name: 'Perfil (Política)', url: 'https://www.perfil.com/rss/politica.xml' },
+            { name: 'RT en Español', url: 'https://spanish.rt.com/rss/' },
+            { name: 'Defonline', url: 'https://defonline.com.ar/feed/' },
+            { name: 'Wikipedia', url: 'https://es.wikipedia.org/w/index.php?title=Special:Feed&feed=rss&namespace=0' }
+        ];
+
+        let currentFeedTab = 'my-posts';
+
+        function switchFeedTab(tab) {
+            currentFeedTab = tab;
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            const container = document.getElementById('feed-container');
+            container.innerHTML = '<div class="loading-frog">🐱 Explorando...</div>';
+            
+            if (tab === 'my-posts') loadMyPosts();
+            else loadForest();
+        }
+
+        async function loadMyPosts() {
+            const container = document.getElementById('feed-container');
+            try {
+                const response = await fetch('posts.json');
+                const posts = await response.json();
+                container.innerHTML = '';
+                posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                posts.forEach(post => container.appendChild(createPostCard(post, true)));
+            } catch (error) {
+                container.innerHTML = `<div style="text-align:center; padding:20px;">No hay hojas. Crea tu primer post en el panel izquierdo.</div>`;
+            }
+        }
+
+        async function loadForest() {
+            const container = document.getElementById('feed-container');
+            container.innerHTML = '';
+            for (const source of FOLLOWING_SOURCES) {
+                const sourceHeader = document.createElement('h3');
+                sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0;";
+                sourceHeader.innerText = `🍃 Hojas de: ${source.name}`;
+                container.appendChild(sourceHeader);
+                try {
+                    const proxy = 'https://api.rss2json.com/v1/api.json?rss_url=';
+                    const res = await fetch(proxy + encodeURIComponent(source.url));
+                    const data = await res.json();
+                    if (data.status === 'ok') {
+                        data.items.slice(0, 3).forEach(item => {
+                            const fakePost = { title: item.title, date: item.pubDate, content: item.description, author: source.name, link: item.link };
+                            container.appendChild(createPostCard(fakePost, false));
+                        });
+                    }
+                } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error conectando con ${source.name}</div>`; }
+            }
+        }
+
+        function createPostCard(post, isOwn) {
+            const card = document.createElement('article');
+            card.className = 'leaf-card';
+            let mediaHtml = '';
+            
+            if (isOwn && post.media) {
+                const ext = post.media.split('.').pop().toLowerCase();
+                const mediaPath = 'media/' + post.media;
+                if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) mediaHtml = `<div class="media-container"><img src="${mediaPath}" loading="lazy"></div>`;
+                else if (['mp4', 'webm'].includes(ext)) mediaHtml = `<div class="media-container"><video controls><source src="${mediaPath}" type="video/mp4"></video></div>`;
+                else if (['mp3', 'wav'].includes(ext)) mediaHtml = `<div class="media-container"><audio controls src="${mediaPath}"></audio></div>`;
+                else mediaHtml = `<a href="${mediaPath}" target="_blank" class="download-link">📄 Descargar ${post.media}</a>`;
+            }
+            if (!isOwn && post.content) {
+                const match = post.content.match(/src="([^"]+)"/);
+                if (match) mediaHtml = `<div class="media-container"><img src="${match[1]}"></div>`;
+                else {
+                    const seed = post.title.replace(/\s/g, '');
+                    mediaHtml = `<div class="media-container"><img src="https://picsum.photos/seed/${seed}/600/300" style="opacity:0.8"></div>`;
+                }
+            }
+
+            const cleanContent = post.content.replace(/<[^>]*>?/gm, '').substring(0, 300) + '...';
+            card.innerHTML = `
+                <div class="post-meta">📅 ${new Date(post.date).toLocaleDateString()} ${isOwn ? '✏️ Propio' : '🌍 ' + (post.author || 'Externo')}</div>
+                <h2 class="post-title">${post.title}</h2>
+                ${mediaHtml}
+                <div class="post-content">${isOwn ? post.content : cleanContent} ${!isOwn ? `<br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer ↗</a>` : ''}</div>
+            `;
+            return card;
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => loadMyPosts());
+    </script>
+</body>
+</html>
