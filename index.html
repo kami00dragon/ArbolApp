@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArbolApp: Red Social Libre</title>
+    <title>ArbolApp - Red Social Libre</title>
     <style>
         /* --- ESTILOS GENERALES --- */
         :root {
@@ -117,6 +117,18 @@
         img, video { width: 100%; display: block; }
         .download-link { display: inline-block; margin-top: 10px; padding: 5px 15px; background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem; }
 
+        /* Estilo para la instrucción de feeds */
+        .feed-instruction {
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px dashed var(--leaf-light);
+            border-radius: 10px;
+            text-align: center;
+            background: rgba(46, 125, 50, 0.1);
+        }
+        .feed-instruction h4 { margin-top: 0; color: var(--leaf-light); }
+        .feed-instruction code { background: #000; padding: 2px 5px; border-radius: 3px; color: #fff; }
+
         .loading-frog { text-align: center; padding: 20px; font-size: 3rem; }
 
         @media (max-width: 900px) {
@@ -135,7 +147,7 @@
         <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2>🌱 Estación de Crecimiento</h2>
+                <h2>🌱 ArbolApp</h2>
             </div>
             
             <div class="sidebar-tabs">
@@ -232,11 +244,11 @@
 
                 <nav class="nav-branches">
                     <button class="nav-btn active" onclick="switchFeedTab('my-posts')">Mis Hojas</button>
-                    <button class="nav-btn" onclick="switchFeedTab('forest')">El Bosque (Seguidos)</button>
+                    <button class="nav-btn" onclick="switchFeedTab('branches')">Ramas</button>
                 </nav>
 
                 <div id="feed-container">
-                    <div class="loading-frog">🐱 Cargando...</div>
+                    <div class="loading-frog">🌱 Cargando...</div>
                 </div>
             </div>
         </main>
@@ -288,9 +300,9 @@
         }
 
         // --- FEED LOGIC ---
+        // Actualizado: RT eliminado, Perfil corregido
         const FOLLOWING_SOURCES = [
-            { name: 'Perfil (Política)', url: 'https://www.perfil.com/rss/politica.xml' },
-            { name: 'RT en Español', url: 'https://spanish.rt.com/rss/' },
+            { name: 'Perfil', url: 'https://www.perfil.com/feed/' },
             { name: 'Defonline', url: 'https://defonline.com.ar/feed/' },
             { name: 'Wikipedia', url: 'https://es.wikipedia.org/w/index.php?title=Special:Feed&feed=rss&namespace=0' }
         ];
@@ -302,10 +314,10 @@
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             const container = document.getElementById('feed-container');
-            container.innerHTML = '<div class="loading-frog">🐱 Explorando...</div>';
+            container.innerHTML = '<div class="loading-frog">🌱 Explorando...</div>';
             
             if (tab === 'my-posts') loadMyPosts();
-            else loadForest();
+            else loadBranches();
         }
 
         async function loadMyPosts() {
@@ -327,16 +339,18 @@
             }
         }
 
-        async function loadForest() {
+        // Renombrado de loadForest a loadBranches
+        async function loadBranches() {
             const container = document.getElementById('feed-container');
             container.innerHTML = '';
 
-            // El gato ha sido eliminado, aquí solo se cargan los feeds
             for (const source of FOLLOWING_SOURCES) {
+                // Header: "Hojas de la rama: [Nombre]"
                 const sourceHeader = document.createElement('h3');
                 sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0;";
-                sourceHeader.innerText = `🍃 Hojas de: ${source.name}`;
+                sourceHeader.innerText = `🍃 Hojas de la rama: ${source.name}`;
                 container.appendChild(sourceHeader);
+                
                 try {
                     const proxy = 'https://api.rss2json.com/v1/api.json?rss_url=';
                     const res = await fetch(proxy + encodeURIComponent(source.url));
@@ -347,8 +361,23 @@
                             container.appendChild(createPostCard(fakePost, false));
                         });
                     }
-                } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error conectando con ${source.name}</div>`; }
+                } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error cargando la rama ${source.name}</div>`; }
             }
+
+            // Instrucción para agregar más feeds
+            const instructionBox = document.createElement('div');
+            instructionBox.className = 'feed-instruction';
+            instructionBox.innerHTML = `
+                <h4>🌿 ¿Quieres agregar más Ramas?</h4>
+                <p style="font-size:0.9rem; color:#cfd8dc;">
+                    Para agregar más periódicos o blogs, abre el archivo <code>index.html</code> en tu editor.<br><br>
+                    Busca la variable <code>FOLLOWING_SOURCES</code> dentro del script y añade una línea nueva con el nombre y la URL del RSS:
+                </p>
+                <div class="code-snippet" style="text-align:left; background:#000; color:#fff;">
+{ name: 'Nombre Blog', url: 'https://sitio.com/feed' },
+                </div>
+            `;
+            container.appendChild(instructionBox);
         }
 
         function createPostCard(post, isOwn) {
@@ -375,10 +404,10 @@
 
             const cleanContent = post.content.replace(/<[^>]*>?/gm, '').substring(0, 300) + '...';
             card.innerHTML = `
-                <div class="post-meta">📅 ${new Date(post.date).toLocaleDateString()} ${isOwn ? '✏️ Propio' : '🌍 ' + (post.author || 'Externo')}</div>
+                <div class="post-meta">📅 ${new Date(post.date).toLocaleDateString()} ${isOwn ? '✏️ Propio' : '🌳 ' + (post.author || 'Externo')}</div>
                 <h2 class="post-title">${post.title}</h2>
                 ${mediaHtml}
-                <div class="post-content">${isOwn ? post.content : cleanContent} ${!isOwn ? `<br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer ↗</a>` : ''}</div>
+                <div class="post-content">${isOwn ? post.content : cleanContent} ${!isOwn ? `<br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer en la rama ↗</a>` : ''}</div>
             `;
             return card;
         }
