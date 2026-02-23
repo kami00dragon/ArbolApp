@@ -8,6 +8,9 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- 2. TU CONFIGURACIÓN P2P EXTERNA -->
     <script src="p2p-config.js"></script>
+    <!-- 3. ENLAZE AL RSS PARA MASTODON (Detección Automática) -->
+    <link rel="alternate" type="application/rss+xml" title="Feed de ArbolApp" href="rss.xml">
+    
     <style>
         /* --- ESTILOS GENERALES --- */
         :root {
@@ -84,6 +87,14 @@
         }
         .btn-action:hover { background: #c2185b; }
         
+        /* Estilo para el botón RSS (Naranja) */
+        .btn-rss {
+            background: #FF9800;
+        }
+        .btn-rss:hover {
+            background: #F57C00;
+        }
+
         .btn-secondary {
             width: 100%; padding: 10px; background: #5d4037; color: white; border: 1px solid #8d6e63; border-radius: 5px; font-size: 0.9rem; cursor: pointer;
         }
@@ -253,6 +264,22 @@
             <!-- PESTAÑA: GESTIÓN DE DATOS -->
             <div id="tab-data" class="sidebar-content" style="display: none;">
                 <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px;">📦 Sincronización</h3>
+                
+                <!-- SECCIÓN RSS AGREGADA -->
+                <div style="background: rgba(255, 152, 0, 0.1); padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #FF9800;">
+                    <h4 style="margin:0 0 5px 0; color:#FF9800;">📡 Generador RSS</h4>
+                    <p style="font-size:0.8rem; color:#ffe0b2; margin-bottom:10px;">
+                        Para que Mastodon pueda seguirte, necesitas actualizar el archivo <code>rss.xml</code>.
+                    </p>
+                    <div class="form-group">
+                        <label style="font-size:0.8rem;">URL de tu Sitio (Base):</label>
+                        <input type="text" id="site-url-input" placeholder="https://usuario.github.io/repo/">
+                    </div>
+                    <button class="btn-action btn-rss" onclick="generateAndDownloadRSS()">⬇️ Descargar rss.xml</button>
+                </div>
+
+                <hr style="border:0; border-top:1px dashed #5d4037; margin:20px 0;">
+
                 <p style="font-size:0.85rem; color:#cfd8dc; margin-bottom:15px;">
                     Tus posts se guardan localmente. Para hacerlos permanentes en la web, exporta el archivo JSON.
                 </p>
@@ -647,6 +674,107 @@
             w.appendChild(d); w.scrollTop = w.scrollHeight;
         }
         document.getElementById('msg-input').addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
+
+        // --- NUEVO: GENERADOR RSS INTEGRADO ---
+        
+        // Mapeo de extensiones a tipos MIME
+        function getMimeType(extension) {
+            const ext = extension.toLowerCase();
+            const map = {
+                'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif',
+                'mp4': 'video/mp4', 'webm': 'video/webm',
+                'mp3': 'audio/mpeg', 'wav': 'audio/wav',
+                'pdf': 'application/pdf'
+            };
+            return map[ext] || 'application/octet-stream';
+        }
+
+        // Escapar caracteres especiales para XML
+        function escapeXml(unsafe) {
+            return unsafe.replace(/[<>&'"]/g, function (c) {
+                switch (c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
+                }
+            });
+        }
+
+        // Formato de fecha para RSS (RFC 822)
+        function formatDateRFC822(isoString) {
+            return new Date(isoString).toUTCString();
+        }
+
+        // Función principal del generador
+        async function generateAndDownloadRSS() {
+            const siteUrlInput = document.getElementById('site-url-input');
+            const siteUrl = siteUrlInput.value.trim();
+            
+            if (!siteUrl) { 
+                alert("Por favor ingresa la URL base de tu sitio (ej: https://usuario.github.io/repo/)"); 
+                return; 
+            }
+            
+            // Asegurar barra final
+            const baseUrl = siteUrl.endsWith('/') ? siteUrl : siteUrl + '/';
+
+            // Cargar posts (locales + servidor)
+            const posts = await loadPostsData();
+            
+            // Iniciar construcción XML
+            let xml = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>Árbol: Red Social Libre</title>
+    <link>${baseUrl}</link>
+    <description>Un espacio personal y libre para compartir ideas, multimedia y pensamientos.</description>
+    <language>es</language>
+`;
+
+            // Iterar posts
+            posts.forEach(post => {
+                const pubDate = formatDateRFC822(post.date);
+                const link = `${baseUrl}#post-${post.id}`;
+                
+                // Construir descripción (texto plano escapado)
+                let description = escapeXml(post.content || "");
+
+                // Enclosure (Adjuntos) - Solo si hay media
+                let enclosureTag = "";
+                if (post.media) {
+                    const mediaUrl = `${baseUrl}media/${post.media}`;
+                    const ext = post.media.split('.').pop();
+                    const mime = getMimeType(ext);
+                    enclosureTag = `\n    <enclosure url="${mediaUrl}" type="${mime}"/>`;
+                }
+
+                xml += `
+    <item>
+      <title>${escapeXml(post.title)}</title>
+      <link>${link}</link>
+      <description>${description}</description>
+      <pubDate>${pubDate}</pubDate>${enclosureTag}
+    </item>`;
+            });
+
+            xml += `
+  </channel>
+</rss>`;
+
+            // Crear Blob y descargar
+            const blob = new Blob([xml], { type: "application/xml" });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "rss.xml";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            alert("Archivo rss.xml generado. Súbelo a tu repositorio para actualizar el feed.");
+        }
+
     </script>
 </body>
 </html>
