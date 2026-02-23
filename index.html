@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- 2. TU CONFIGURACIÓN P2P EXTERNA -->
     <script src="p2p-config.js"></script>
-    <!-- 3. ENLAZE AL RSS PARA MASTODON (Detección Automática) -->
+    <!-- 3. ENLAZE AL RSS PARA MASTODON -->
     <link rel="alternate" type="application/rss+xml" title="Feed de ArbolApp" href="rss.xml">
     
     <style>
@@ -87,7 +87,6 @@
         }
         .btn-action:hover { background: #c2185b; }
         
-        /* Estilo para el botón RSS (Naranja) */
         .btn-rss {
             background: #FF9800;
         }
@@ -124,7 +123,14 @@
         .leaf-card::before { content: '🌿'; position: absolute; top: -15px; left: -10px; font-size: 1.5rem; transform: rotate(-20deg); }
         .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; display: flex; justify-content: space-between; }
         .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
-        .post-content { line-height: 1.6; font-size: 1rem; }
+        
+        .post-content { 
+            line-height: 1.6; 
+            font-size: 1rem;
+            white-space: pre-wrap; /* Mantiene los saltos de línea del texto plano */
+            word-wrap: break-word;  /* Evita desbordamiento de palabras largas */
+        }
+        
         .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e27d3; background: #000; }
         img, video { width: 100%; display: block; }
         .download-link { display: inline-block; margin-top: 10px; padding: 5px 15px; background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem; }
@@ -265,7 +271,7 @@
             <div id="tab-data" class="sidebar-content" style="display: none;">
                 <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px;">📦 Sincronización</h3>
                 
-                <!-- SECCIÓN RSS AGREGADA -->
+                <!-- SECCIÓN RSS -->
                 <div style="background: rgba(255, 152, 0, 0.1); padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #FF9800;">
                     <h4 style="margin:0 0 5px 0; color:#FF9800;">📡 Generador RSS</h4>
                     <p style="font-size:0.8rem; color:#ffe0b2; margin-bottom:10px;">
@@ -376,36 +382,23 @@
         const INITIAL_DATA = [];
 
         // --- LÓGICA DE CRIPTOGRAFÍA (E2E) ---
-        const ENC_SALT = "arbolapp-static-salt-v1"; // Sal fija para simplificar en estático
+        const ENC_SALT = "arbolapp-static-salt-v1";
 
-        // Derivar clave desde contraseña
         async function getCryptoKey(password) {
             const enc = new TextEncoder();
-            const keyMaterial = await window.crypto.subtle.importKey(
-                "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
-            );
-            return window.crypto.subtle.deriveKey(
-                { name: "PBKDF2", salt: enc.encode(ENC_SALT), iterations: 100000, hash: "SHA-256" },
-                keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
-            );
+            const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
+            return window.crypto.subtle.deriveKey({ name: "PBKDF2", salt: enc.encode(ENC_SALT), iterations: 100000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
         }
 
-        // Cifrar mensaje
         async function encryptMessage(text, password) {
-            if (!password) return null; // Retornar null si no hay clave (sin cifrar)
+            if (!password) return null;
             const key = await getCryptoKey(password);
             const iv = window.crypto.getRandomValues(new Uint8Array(12));
             const encoded = new TextEncoder().encode(text);
             const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-            
-            return {
-                iv: btoa(String.fromCharCode(...iv)),
-                ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-                encrypted: true
-            };
+            return { iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))), encrypted: true };
         }
 
-        // Descifrar mensaje
         async function decryptMessage(encryptedObj, password) {
             try {
                 const key = await getCryptoKey(password);
@@ -413,28 +406,18 @@
                 const data = new Uint8Array(atob(encryptedObj.ciphertext).split("").map(c => c.charCodeAt(0)));
                 const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
                 return new TextDecoder().decode(decrypted);
-            } catch (e) {
-                throw new Error("Clave incorrecta o datos corruptos");
-            }
+            } catch (e) { throw new Error("Clave incorrecta o datos corruptos"); }
         }
 
-        // --- FUNCIONES DE LOG ---
         function logP2P(message) {
             const logDiv = document.getElementById('p2p-log');
-            if(logDiv) {
-                const time = new Date().toLocaleTimeString().split(' ')[0];
-                logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
-                logDiv.scrollTop = logDiv.scrollHeight;
-            }
+            if(logDiv) { const time = new Date().toLocaleTimeString().split(' ')[0]; logDiv.innerHTML += `<div>[${time}] ${message}</div>`; logDiv.scrollTop = logDiv.scrollHeight; }
         }
 
         // --- LÓGICA DE PUBLICACIÓN ---
         async function loadPostsData() {
             let serverPosts = [];
-            try {
-                const response = await fetch('posts.json');
-                if (response.ok) serverPosts = await response.json();
-            } catch (e) { console.log("No posts.json found."); }
+            try { const response = await fetch('posts.json'); if (response.ok) serverPosts = await response.json(); } catch (e) { console.log("No posts.json found."); }
             let localPosts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
             const serverIds = new Set(serverPosts.map(p => p.id));
             const uniqueLocalPosts = localPosts.filter(p => !serverIds.has(p.id));
@@ -462,9 +445,7 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "posts.json"; a.click();
         }
 
-        function clearLocalData() {
-            if(confirm("¿Borrar locales?")) { localStorage.removeItem(LOCAL_STORAGE_KEY); loadMyPosts(); }
-        }
+        function clearLocalData() { if(confirm("¿Borrar locales?")) { localStorage.removeItem(LOCAL_STORAGE_KEY); loadMyPosts(); } }
 
         // --- SISTEMA DE RAMAS (RSS + MASTODON) ---
         const DEFAULT_SOURCES = [
@@ -544,10 +525,25 @@
                 const m = post.content.match(/src="([^"]+)"/);
                 media = m ? `<div class="media-container"><img src="${m[1]}"></div>` : `<div class="media-container"><img src="https://picsum.photos/seed/${post.title.replace(/\s/g,'')}/600/300" style="opacity:0.8"></div>`;
             }
-            const txt = post.content.replace(/<[^>]*>?/gm, '').substring(0, 300) + '...';
+            
+            // --- CAMBIO AQUÍ: Lógica para mostrar contenido completo ---
+            let contentHtml = '';
+            if (isOwn) {
+                // Para posts propios: Escapamos HTML por seguridad pero mostramos TODO el texto.
+                // Los saltos de línea se manejan con CSS (white-space: pre-wrap)
+                contentHtml = post.content.replace(/&/g, "&amp;")
+                                         .replace(/</g, "&lt;")
+                                         .replace(/>/g, "&gt;")
+                                         .replace(/"/g, "&quot;")
+                                         .replace(/'/g, "&#039;");
+            } else {
+                // Para posts externos (RSS): Mostramos el HTML completo tal cual (formato original)
+                contentHtml = post.content;
+            }
+
             card.innerHTML = `
                 <div class="post-meta"><span>📅 ${new Date(post.date).toLocaleDateString()}</span><span>${isOwn?'✏️ Propio':'🌳 '+(post.author||'Externo')}</span></div>
-                <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${txt} ${!isOwn?`<br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer ↗</a>`:''}</div>`;
+                <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${contentHtml} ${!isOwn?`<br><br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer original ↗</a>`:''}</div>`;
             return card;
         }
         document.addEventListener('DOMContentLoaded', () => loadMyPosts());
@@ -578,24 +574,11 @@
             conn = peer.connect(id, { reliable: true });
             conn.on('open', () => { setPhoneStatus('connected'); enableChat(true); addSystemMessage("Conectado."); });
             conn.on('data', async (data) => {
-                // Lógica de recepción con intento de descifrado
                 const password = document.getElementById('crypto-password').value;
-                
                 if (data && typeof data === 'object' && data.encrypted) {
-                    if (!password) {
-                        addMessage("🔒 Mensaje cifrado. Ingresa la clave.", 'locked');
-                        return;
-                    }
-                    try {
-                        const decrypted = await decryptMessage(data, password);
-                        addMessage(decrypted, 'received');
-                    } catch (e) {
-                        addMessage("🚫 Error: No se pudo descifrar (¿Clave incorrecta?)", 'error');
-                    }
-                } else {
-                    // Mensaje sin cifrar (texto plano)
-                    addMessage(data, 'received');
-                }
+                    if (!password) { addMessage("🔒 Mensaje cifrado. Ingresa la clave.", 'locked'); return; }
+                    try { const decrypted = await decryptMessage(data, password); addMessage(decrypted, 'received'); } catch (e) { addMessage("🚫 Error: No se pudo descifrar (¿Clave incorrecta?)", 'error'); }
+                } else { addMessage(data, 'received'); }
             });
             conn.on('close', () => { setPhoneStatus('idle'); enableChat(false); addSystemMessage("Desconectado."); conn = null; });
         }
@@ -607,8 +590,7 @@
                 const password = document.getElementById('crypto-password').value;
                 if (data && typeof data === 'object' && data.encrypted) {
                     if (!password) { addMessage("🔒 Mensaje cifrado.", 'locked'); return; }
-                    try { const d = await decryptMessage(data, password); addMessage(d, 'received'); }
-                    catch (e) { addMessage("🚫 Error descifrando.", 'error'); }
+                    try { const d = await decryptMessage(data, password); addMessage(d, 'received'); } catch (e) { addMessage("🚫 Error descifrando.", 'error'); }
                 } else { addMessage(data, 'received'); }
             });
             conn.on('close', () => { setPhoneStatus('idle'); enableChat(false); conn = null; });
@@ -618,27 +600,12 @@
             const input = document.getElementById('msg-input');
             const txt = input.value.trim();
             if (!txt || !conn) return;
-
             const password = document.getElementById('crypto-password').value;
             let payload = txt;
-
-            // Si hay contraseña, cifrar. Si no, enviar plano.
             if (password) {
-                try {
-                    const encrypted = await encryptMessage(txt, password);
-                    payload = encrypted;
-                    // Mostrar en propio chat ya descifrado
-                    addMessage(txt, 'sent');
-                } catch (e) {
-                    alert("Error cifrando: " + e.message);
-                    return;
-                }
-            } else {
-                addMessage(txt, 'sent');
-            }
-
-            conn.send(payload);
-            input.value = '';
+                try { const encrypted = await encryptMessage(txt, password); payload = encrypted; addMessage(txt, 'sent'); } catch (e) { alert("Error cifrando: " + e.message); return; }
+            } else { addMessage(txt, 'sent'); }
+            conn.send(payload); input.value = '';
         }
 
         function setPhoneStatus(s) {
@@ -661,8 +628,7 @@
         function addMessage(txt, type) {
             const w = document.getElementById('chat-window');
             const d = document.createElement('div');
-            d.className = `message msg-${type}`;
-            d.innerText = txt;
+            d.className = `message msg-${type}`; d.innerText = txt;
             w.appendChild(d); w.scrollTop = w.scrollHeight;
         }
 
@@ -675,55 +641,25 @@
         }
         document.getElementById('msg-input').addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
 
-        // --- NUEVO: GENERADOR RSS INTEGRADO ---
-        
-        // Mapeo de extensiones a tipos MIME
+        // --- GENERADOR RSS ---
         function getMimeType(extension) {
             const ext = extension.toLowerCase();
-            const map = {
-                'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif',
-                'mp4': 'video/mp4', 'webm': 'video/webm',
-                'mp3': 'audio/mpeg', 'wav': 'audio/wav',
-                'pdf': 'application/pdf'
-            };
+            const map = { 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'mp4': 'video/mp4', 'webm': 'video/webm', 'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'pdf': 'application/pdf' };
             return map[ext] || 'application/octet-stream';
         }
-
-        // Escapar caracteres especiales para XML
         function escapeXml(unsafe) {
             return unsafe.replace(/[<>&'"]/g, function (c) {
-                switch (c) {
-                    case '<': return '&lt;';
-                    case '>': return '&gt;';
-                    case '&': return '&amp;';
-                    case '\'': return '&apos;';
-                    case '"': return '&quot;';
-                }
+                switch (c) { case '<': return '&lt;'; case '>': return '&gt;'; case '&': return '&amp;'; case '\'': return '&apos;'; case '"': return '&quot;'; }
             });
         }
+        function formatDateRFC822(isoString) { return new Date(isoString).toUTCString(); }
 
-        // Formato de fecha para RSS (RFC 822)
-        function formatDateRFC822(isoString) {
-            return new Date(isoString).toUTCString();
-        }
-
-        // Función principal del generador
         async function generateAndDownloadRSS() {
             const siteUrlInput = document.getElementById('site-url-input');
             const siteUrl = siteUrlInput.value.trim();
-            
-            if (!siteUrl) { 
-                alert("Por favor ingresa la URL base de tu sitio (ej: https://usuario.github.io/repo/)"); 
-                return; 
-            }
-            
-            // Asegurar barra final
+            if (!siteUrl) { alert("Por favor ingresa la URL base de tu sitio (ej: https://usuario.github.io/repo/)"); return; }
             const baseUrl = siteUrl.endsWith('/') ? siteUrl : siteUrl + '/';
-
-            // Cargar posts (locales + servidor)
             const posts = await loadPostsData();
-            
-            // Iniciar construcción XML
             let xml = `<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
   <channel>
@@ -732,16 +668,10 @@
     <description>Un espacio personal y libre para compartir ideas, multimedia y pensamientos.</description>
     <language>es</language>
 `;
-
-            // Iterar posts
             posts.forEach(post => {
                 const pubDate = formatDateRFC822(post.date);
                 const link = `${baseUrl}#post-${post.id}`;
-                
-                // Construir descripción (texto plano escapado)
                 let description = escapeXml(post.content || "");
-
-                // Enclosure (Adjuntos) - Solo si hay media
                 let enclosureTag = "";
                 if (post.media) {
                     const mediaUrl = `${baseUrl}media/${post.media}`;
@@ -749,7 +679,6 @@
                     const mime = getMimeType(ext);
                     enclosureTag = `\n    <enclosure url="${mediaUrl}" type="${mime}"/>`;
                 }
-
                 xml += `
     <item>
       <title>${escapeXml(post.title)}</title>
@@ -758,20 +687,11 @@
       <pubDate>${pubDate}</pubDate>${enclosureTag}
     </item>`;
             });
-
             xml += `
   </channel>
 </rss>`;
-
-            // Crear Blob y descargar
             const blob = new Blob([xml], { type: "application/xml" });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = "rss.xml";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "rss.xml"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
             alert("Archivo rss.xml generado. Súbelo a tu repositorio para actualizar el feed.");
         }
 
