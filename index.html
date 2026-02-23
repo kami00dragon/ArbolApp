@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArbolApp - Red Social Libre</title>
-    <!-- 1. Cargar Librería PeerJS -->
+    <title>ArbolApp - Red Social Libre (E2E)</title>
+    <!-- 1. Librería PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- 2. Cargar Nuestra Configuración Avanzada -->
+    <!-- 2. TU CONFIGURACIÓN P2P EXTERNA -->
     <script src="p2p-config.js"></script>
     <style>
         /* --- ESTILOS GENERALES --- */
@@ -18,7 +18,7 @@
             --flower-pink: #e91e63;
             --text-parchment: #efebe9;
             --border-stem: #1b5e20;
-            --sidebar-width: 320px;
+            --sidebar-width: 340px;
         }
 
         body {
@@ -66,6 +66,7 @@
             cursor: pointer;
             font-weight: bold;
             border-bottom: 3px solid transparent;
+            transition: 0.3s;
         }
         .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
         .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
@@ -79,9 +80,14 @@
         .form-group textarea { resize: vertical; min-height: 100px; }
         
         .btn-action {
-            width: 100%; padding: 12px; background: var(--flower-pink); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: background 0.2s;
+            width: 100%; padding: 12px; background: var(--flower-pink); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: background 0.2s; margin-bottom: 10px;
         }
         .btn-action:hover { background: #c2185b; }
+        
+        .btn-secondary {
+            width: 100%; padding: 10px; background: #5d4037; color: white; border: 1px solid #8d6e63; border-radius: 5px; font-size: 0.9rem; cursor: pointer;
+        }
+        .btn-secondary:hover { background: #4e342e; }
 
         /* --- FEED --- */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
@@ -105,7 +111,7 @@
         .leaf-card { background-color: var(--wood-light); border-radius: 5px 30px 5px 30px; padding: 20px; margin-bottom: 25px; border: 2px solid var(--border-stem); position: relative; box-shadow: 5px 5px 0px rgba(0,0,0,0.2); transition: transform 0.2s; }
         .leaf-card:hover { transform: translateY(-3px); }
         .leaf-card::before { content: '🌿'; position: absolute; top: -15px; left: -10px; font-size: 1.5rem; transform: rotate(-20deg); }
-        .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; }
+        .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; display: flex; justify-content: space-between; }
         .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
         .post-content { line-height: 1.6; font-size: 1rem; }
         .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e27d3; background: #000; }
@@ -117,6 +123,18 @@
         .feed-instruction code { background: #000; padding: 2px 5px; border-radius: 3px; color: #fff; }
         .loading-frog { text-align: center; padding: 20px; font-size: 3rem; }
 
+        /* --- GESTOR DE FUENTES --- */
+        .source-manager {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #5d4037;
+        }
+        .source-manager h4 { margin-top: 0; color: var(--flower-pink); font-size: 0.9rem; }
+        .input-group { display: flex; gap: 5px; margin-bottom: 10px; }
+        .input-group input { flex: 1; }
+
         /* --- MODAL P2P --- */
         #p2p-modal {
             border: 4px solid var(--leaf-green);
@@ -124,42 +142,17 @@
             padding: 0;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             width: 95%;
-            max-width: 600px; /* Un poco más ancho para el log */
+            max-width: 600px;
             background: var(--wood-light);
             color: var(--text-parchment);
         }
-        
         #p2p-modal::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
 
-        .p2p-header {
-            background: var(--leaf-green);
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--flower-pink);
-        }
-
-        .p2p-status-area {
-            text-align: center;
-            padding: 10px 20px;
-            background: rgba(0,0,0,0.2);
-            border-bottom: 1px solid var(--border-stem);
-        }
-
-        .p2p-instructions {
-            margin: 10px 20px;
-            padding: 15px;
-            background: rgba(46, 125, 50, 0.1);
-            border: 1px dashed var(--leaf-light);
-            border-radius: 8px;
-            font-size: 0.85rem;
-            color: #cfd8dc;
-        }
+        .p2p-header { background: var(--leaf-green); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--flower-pink); }
+        .p2p-status-area { text-align: center; padding: 10px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-stem); }
+        
+        .p2p-instructions { margin: 10px 20px; padding: 15px; background: rgba(46, 125, 50, 0.1); border: 1px dashed var(--leaf-light); border-radius: 8px; font-size: 0.85rem; color: #cfd8dc; }
         .p2p-instructions h4 { margin: 0 0 10px 0; color: var(--leaf-light); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
-        .p2p-instructions ol { margin: 0; padding-left: 20px; }
-        .p2p-instructions li { margin-bottom: 5px; line-height: 1.3; }
-        .p2p-instructions b { color: #fff; }
 
         /* Iconos de Teléfono */
         .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 5px; }
@@ -168,49 +161,36 @@
         .phone-grey { color: #795548; }
 
         @keyframes ringing {
-            0% { transform: rotate(0deg); }
-            10% { transform: rotate(-15deg); }
-            20% { transform: rotate(15deg); }
-            30% { transform: rotate(-15deg); }
-            40% { transform: rotate(15deg); }
-            50% { transform: rotate(0deg); }
-            100% { transform: rotate(0deg); }
+            0% { transform: rotate(0deg); } 10% { transform: rotate(-15deg); } 20% { transform: rotate(15deg); } 30% { transform: rotate(-15deg); } 40% { transform: rotate(15deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(0deg); }
         }
 
-        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 450px; }
+        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 500px; }
+        .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.75rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
-        /* Log de Diagnóstico (Nuevo) */
-        .p2p-log {
-            height: 80px;
-            background: #000;
-            border: 1px solid #555;
-            margin-bottom: 10px;
-            padding: 5px;
-            font-family: monospace;
-            font-size: 0.75rem;
-            color: #0f0;
-            overflow-y: auto;
-            border-radius: 4px;
-        }
-
-        .chat-window {
-            flex-grow: 1;
-            background: #000;
-            border: 2px solid #5d4037;
-            border-radius: 8px;
-            padding: 10px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            font-family: monospace;
-        }
-
+        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; }
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; }
         .msg-received { background: #555; color: white; align-self: flex-start; }
-        
-        .p2p-controls { display: flex; gap: 10px; }
+        .msg-error { background: #511; color: #ffcccc; border: 1px solid #f00; font-size: 0.8rem; }
+        .msg-locked { background: #443300; color: #ffecb3; border: 1px solid #ffb300; font-style: italic; }
+
+        .p2p-controls { display: flex; flex-direction: column; gap: 10px; }
+        .p2p-row { display: flex; gap: 10px; }
         .btn-call { background: #2196F3; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; }
         .btn-send { background: var(--flower-pink); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 0 0 50px; }
+
+        /* Campo de Contraseña */
+        .crypto-field {
+            background: #2a1b15;
+            border: 1px solid #ffb300;
+            color: #ffb300;
+            padding: 8px;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 5px;
+            font-family: monospace;
+        }
+        .crypto-label { font-size: 0.8rem; color: #ffb300; margin-bottom: 2px; display: block; }
 
         @media (max-width: 900px) {
             .app-layout { grid-template-columns: 1fr; overflow-y: auto; }
@@ -233,7 +213,7 @@
             
             <div class="sidebar-tabs">
                 <button class="tab-btn active" onclick="switchSidebarTab('editor')">✏️ Escribir</button>
-                <button class="tab-btn" onclick="switchSidebarTab('help')">📚 Cómo Usar</button>
+                <button class="tab-btn" onclick="switchSidebarTab('data')">💾 Datos</button>
             </div>
 
             <!-- PESTAÑA: EDITOR -->
@@ -250,7 +230,7 @@
 
                 <div class="form-group">
                     <label>Archivo Multimedia (Opcional)</label>
-                    <input type="text" id="post-media" placeholder="Ej: foto.jpg (solo nombre, no ruta)">
+                    <input type="text" id="post-media" placeholder="Ej: foto.jpg (debe estar en /media)">
                 </div>
 
                 <div class="form-group">
@@ -264,37 +244,24 @@
                     </select>
                 </div>
 
-                <button class="btn-action" onclick="generateJsonFile()">⬇️ Generar y Descargar JSON</button>
-                <p style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-top:10px;">Esto descarga un archivo .json con tu post.</p>
+                <button class="btn-action" onclick="publishPost()">🌱 Publicar (Guardar Local)</button>
+                <div style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-bottom:15px;">
+                    Esto guarda en tu navegador y lo muestra al instante.
+                </div>
             </div>
 
-            <!-- PESTAÑA: INSTRUCCIONES -->
-            <div id="tab-help" class="sidebar-content" style="display: none;">
-                <p style="text-align:center; font-size:0.9rem;">Sigue estos pasos para publicar:</p>
-                <div class="instruction-step">
-                    <span class="step-title">1. Descarga el código</span>
-                    <div class="visual-box"><span class="icon-file">📄</span> nuevo-post.json</div>
-                    <div class="arrow-down">↓</div>
-                    <small>Abre el archivo descargado con el Bloc de Notas.</small>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-title">2. Sube tu archivo multimedia</span>
-                    <div style="display:flex; align-items:center; justify-content:space-between;">
-                        <div class="visual-box" style="width:45%;"><span class="icon-file">🖼️</span> mi-foto.jpg</div>
-                        <div style="font-size:1.5rem;">➡️</div>
-                        <div class="visual-box" style="width:45%; background:#ffecb3;"><span class="icon-folder">📁</span> media/</div>
-                    </div>
-                    <small>Sube el archivo (foto/video) a la carpeta 'media' en tu repositorio.</small>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-title">3. Pega en posts.json</span>
-                    <div class="visual-box"><span class="icon-folder">📁</span> posts.json</div>
-                    <div class="arrow-down">↓</div>
-                    <small>Abre <code>posts.json</code>. Busca el corchete de apertura <code>[</code> y pega ahí tu código. ¡Asegúrate de usar comas!</small>
-                </div>
-                <div class="instruction-step" style="border-color:var(--flower-pink);">
-                    <span class="step-title">4. Guarda y Sube</span>
-                    <p>Haz commit en GitHub. ¡Tu hoja nueva crecerá!</p>
+            <!-- PESTAÑA: GESTIÓN DE DATOS -->
+            <div id="tab-data" class="sidebar-content" style="display: none;">
+                <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px;">📦 Sincronización</h3>
+                <p style="font-size:0.85rem; color:#cfd8dc; margin-bottom:15px;">
+                    Tus posts se guardan localmente. Para hacerlos permanentes en la web, exporta el archivo JSON.
+                </p>
+                
+                <button class="btn-action" onclick="exportToJson()">⬇️ Descargar posts.json</button>
+                
+                <div style="margin-top: 20px;">
+                    <h4 style="margin:0 0 10px 0; color:#ffcc80;">🔄 Resetear Local</h4>
+                    <button class="btn-secondary" onclick="clearLocalData()">Borrar borradores locales</button>
                 </div>
             </div>
         </aside>
@@ -305,14 +272,14 @@
                 <header class="feed-header">
                     <div class="header-title">
                         <h1>🌳 ArbolApp</h1>
-                        <span class="subtitle">Red Social Libre</span>
+                        <span class="subtitle">Red Social Estática y Cifrada</span>
                     </div>
-                    <button class="btn-p2p-header" onclick="openP2P()">📞 Mensajes P2P</button>
+                    <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes P2P</button>
                 </header>
 
                 <nav class="nav-branches">
                     <button class="nav-btn active" onclick="switchFeedTab('my-posts')">Mis Hojas</button>
-                    <button class="nav-btn" onclick="switchFeedTab('branches')">Ramas</button>
+                    <button class="nav-btn" onclick="switchFeedTab('branches')">Ramas (RSS/Mastodon)</button>
                 </nav>
 
                 <div id="feed-container">
@@ -323,10 +290,10 @@
 
     </div>
 
-    <!-- MODAL CHAT P2P -->
+    <!-- MODAL CHAT P2P CON CIFRADO -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
-            <h3>📞 Chat Directo (P2P)</h3>
+            <h3>🔒 Chat P2P Cifrado</h3>
             <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
         
@@ -336,24 +303,21 @@
         </div>
 
         <div class="p2p-instructions">
-            <h4>📞 Cómo conectar:</h4>
-            <ol>
-                <li>Copia tu <b>Tu ID</b> (casilla de arriba) y envíalo a tu amigo.</li>
-                <li>Pega el <b>ID de tu amigo</b> en la casilla de abajo.</li>
-                <li>Asegúrate de que ambos tengan esta ventana abierta.</li>
-                <li>Presiona <b>Llamar / Conectar</b>.</li>
-            </ol>
-            <small style="color:#aaa; display:block; margin-top:5px;">Si falla, revisa el log verde abajo.</small>
+            <h4>🔐 Cifrado E2E</h4>
+            <p style="margin:0; font-size:0.8rem;">Acuerda una <b>Contraseña</b> con tu amigo fuera de esta app. Escríbela abajo para cifrar el chat.</p>
         </div>
 
         <div class="p2p-body">
-            <!-- LOG DE DIAGNÓSTICO (NUEVO) -->
-            <div id="p2p-log" class="p2p-log">Esperando inicialización...</div>
+            <div id="p2p-log" class="p2p-log">Sistema iniciado...</div>
+            
+            <!-- Campo de Clave -->
+            <div style="margin-bottom: 10px;">
+                <label class="crypto-label">🔑 Contraseña de Cifrado (Compartida):</label>
+                <input type="password" id="crypto-password" class="crypto-field" placeholder="Escribe la clave secreta aquí...">
+            </div>
 
-            <!-- Área de Chat -->
             <div id="chat-window" class="chat-window"></div>
 
-            <!-- Controles -->
             <div style="margin-bottom: 10px;">
                 <label style="font-size:0.8rem; color:#aaa;">Tu ID:</label>
                 <div style="display:flex; gap:5px;">
@@ -363,382 +327,326 @@
             </div>
 
             <div style="margin-bottom: 10px;">
-                <label style="font-size:0.8rem; color:#aaa;">Conectar con ID del otro:</label>
+                <label style="font-size:0.8rem; color:#aaa;">Conectar con ID:</label>
                 <input type="text" id="remote-peer-id" placeholder="Pega el ID aquí...">
             </div>
 
             <div class="p2p-controls">
-                <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Llamar / Conectar</button>
-                <input type="text" id="msg-input" placeholder="Escribe un mensaje..." disabled>
-                <button class="btn-send" id="btn-send" onclick="sendMessage()" disabled>➤</button>
+                <div class="p2p-row">
+                    <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Conectar</button>
+                </div>
+                <div class="p2p-row">
+                    <input type="text" id="msg-input" placeholder="Mensaje secreto..." disabled>
+                    <button class="btn-send" id="btn-send" onclick="sendMessage()" disabled>➤</button>
+                </div>
             </div>
         </div>
     </dialog>
 
     <script>
-        // --- VARIABLES P2P ---
-        let peer = null;
-        let conn = null;
-        let myId = null;
-        let connectionTimeout = null;
+        // --- GESTIÓN DE ESTADO Y DATOS ---
+        const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
+        const INITIAL_DATA = [];
 
-        // --- FUNCIÓN DE LOG (DIAGNÓSTICO) ---
+        // --- LÓGICA DE CRIPTOGRAFÍA (E2E) ---
+        const ENC_SALT = "arbolapp-static-salt-v1"; // Sal fija para simplificar en estático
+
+        // Derivar clave desde contraseña
+        async function getCryptoKey(password) {
+            const enc = new TextEncoder();
+            const keyMaterial = await window.crypto.subtle.importKey(
+                "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+            );
+            return window.crypto.subtle.deriveKey(
+                { name: "PBKDF2", salt: enc.encode(ENC_SALT), iterations: 100000, hash: "SHA-256" },
+                keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+            );
+        }
+
+        // Cifrar mensaje
+        async function encryptMessage(text, password) {
+            if (!password) return null; // Retornar null si no hay clave (sin cifrar)
+            const key = await getCryptoKey(password);
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const encoded = new TextEncoder().encode(text);
+            const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+            
+            return {
+                iv: btoa(String.fromCharCode(...iv)),
+                ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+                encrypted: true
+            };
+        }
+
+        // Descifrar mensaje
+        async function decryptMessage(encryptedObj, password) {
+            try {
+                const key = await getCryptoKey(password);
+                const iv = new Uint8Array(atob(encryptedObj.iv).split("").map(c => c.charCodeAt(0)));
+                const data = new Uint8Array(atob(encryptedObj.ciphertext).split("").map(c => c.charCodeAt(0)));
+                const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+                return new TextDecoder().decode(decrypted);
+            } catch (e) {
+                throw new Error("Clave incorrecta o datos corruptos");
+            }
+        }
+
+        // --- FUNCIONES DE LOG ---
         function logP2P(message) {
             const logDiv = document.getElementById('p2p-log');
-            const time = new Date().toLocaleTimeString().split(' ')[0];
-            logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-            console.log(message); // También a consola
-        }
-
-        // --- INICIALIZACIÓN (Carga Configuración) ---
-        window.addEventListener('load', () => {
-            // Usamos la configuración de p2p-config.js si existe, si no, usamos defaults
-            const config = (typeof P2P_CONFIG !== 'undefined') ? P2P_CONFIG : {
-                iceServers: [{ url: 'stun:stun.l.google.com:19302' }],
-                debug: 2
-            };
-
-            logP2P("Iniciando red P2P...");
-
-            peer = new Peer(null, config);
-
-            peer.on('open', (id) => {
-                myId = id;
-                logP2P("Red lista. Tu ID: " + id);
-                if(document.getElementById('my-peer-id')) {
-                    document.getElementById('my-peer-id').value = myId;
-                }
-            });
-
-            peer.on('connection', (connection) => {
-                logP2P("Llamada entrante de: " + connection.peer);
-                handleConnection(connection);
-                if(document.visibilityState === 'visible') {
-                    alert("¡Llamada entrante! Aceptando conexión...");
-                }
-            });
-
-            peer.on('error', (err) => {
-                logP2P("Error de PeerJS: " + err.type);
-                alert("Error de red P2P (" + err.type + "): Es posible que el servidor de señalización esté caído. Reintentá en unos minutos.");
-            });
-        });
-
-        // --- FUNCIONES P2P ---
-
-        function openP2P() {
-            document.getElementById('p2p-modal').showModal();
-            if (myId) {
-                document.getElementById('my-peer-id').value = myId;
-                setPhoneStatus('idle');
-            } else {
-                document.getElementById('status-text').innerText = "Inicializando...";
+            if(logDiv) {
+                const time = new Date().toLocaleTimeString().split(' ')[0];
+                logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
+                logDiv.scrollTop = logDiv.scrollHeight;
             }
         }
 
-        function closeP2P() {
-            document.getElementById('p2p-modal').close();
+        // --- LÓGICA DE PUBLICACIÓN ---
+        async function loadPostsData() {
+            let serverPosts = [];
+            try {
+                const response = await fetch('posts.json');
+                if (response.ok) serverPosts = await response.json();
+            } catch (e) { console.log("No posts.json found."); }
+            let localPosts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+            const serverIds = new Set(serverPosts.map(p => p.id));
+            const uniqueLocalPosts = localPosts.filter(p => !serverIds.has(p.id));
+            return [...serverPosts, ...uniqueLocalPosts].sort((a, b) => new Date(b.date) - new Date(a.date));
         }
 
-        function copyMyId() {
-            const idField = document.getElementById('my-peer-id');
-            idField.select();
-            document.execCommand('copy');
-            alert("ID copiado al portapapeles");
-        }
-
-        // --- Lógica de Conexión Robusta ---
-        function connectToPeer() {
-            const remoteId = document.getElementById('remote-peer-id').value.trim();
-            if (!remoteId) {
-                alert("Por favor ingresa el ID del otro usuario.");
-                return;
-            }
-
-            logP2P("Intentando conectar a: " + remoteId);
-            setPhoneStatus('calling');
-
-            // Establecer conexión
-            conn = peer.connect(remoteId, {
-                reliable: true // Asegura que los datos lleguen en orden
-            });
-
-            // Timeout: Si en 15 segundos no se conecta, asumimos fallo
-            connectionTimeout = setTimeout(() => {
-                if (!conn.open) {
-                    logP2P("Tiempo de espera agotado (Timeout). El otro usuario probablemente no tiene la página abierta o hay un firewall bloqueando.");
-                    setPhoneStatus('idle');
-                    alert("La conexión falló. Asegúrate de que ambos tengan la página abierta en este mismo momento y que ambos usen HTTPS (GitHub Pages).");
-                    if(conn) conn.close();
-                }
-            }, 15000);
-
-            conn.on('open', () => {
-                clearTimeout(connectionTimeout);
-                logP2P("Conexión establecida.");
-                setPhoneStatus('connected');
-                enableChat(true);
-                addSystemMessage("Conectado con éxito.");
-            });
-
-            conn.on('data', (data) => {
-                addMessage(data, 'received');
-            });
-
-            conn.on('close', () => {
-                logP2P("Conexión cerrada.");
-                setPhoneStatus('idle');
-                enableChat(false);
-                addSystemMessage("La otra persona se ha desconectado.");
-                conn = null;
-            });
-
-            conn.on('error', (err) => {
-                logP2P("Error en la conexión: " + err.type);
-                setPhoneStatus('idle');
-                alert("Error de conexión: " + err.type);
-            });
-        }
-
-        function handleConnection(connection) {
-            logP2P("Aceptando conexión...");
-            conn = connection;
-            
-            conn.on('open', () => {
-                logP2P("Llamada aceptada.");
-                setPhoneStatus('connected');
-                enableChat(true);
-                addSystemMessage("Conectado.");
-            });
-
-            conn.on('data', (data) => {
-                addMessage(data, 'received');
-            });
-
-            conn.on('close', () => {
-                logP2P("Desconexión.");
-                setPhoneStatus('idle');
-                enableChat(false);
-                conn = null;
-            });
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('msg-input');
-            const text = input.value.trim();
-            if (!text || !conn) return;
-            logP2P("Enviando mensaje...");
-            conn.send(text);
-            addMessage(text, 'sent');
-            input.value = '';
-        }
-
-        // --- UI HELPERS ---
-
-        function setPhoneStatus(status) {
-            const icon = document.getElementById('status-icon');
-            const text = document.getElementById('status-text');
-            if (status === 'idle') {
-                icon.className = 'phone-icon phone-grey';
-                text.innerText = "Desconectado";
-            } else if (status === 'calling') {
-                icon.className = 'phone-icon phone-blue';
-                text.innerText = "Conectando...";
-            } else if (status === 'connected') {
-                icon.className = 'phone-icon phone-green';
-                text.innerText = "En línea";
-            }
-        }
-
-        function enableChat(enabled) {
-            const btnConnect = document.getElementById('btn-connect');
-            const inputMsg = document.getElementById('msg-input');
-            const btnSend = document.getElementById('btn-send');
-            if (enabled) {
-                btnConnect.disabled = true;
-                btnConnect.innerText = "Conectado";
-                btnConnect.style.background = "#4CAF50";
-                inputMsg.disabled = false;
-                btnSend.disabled = false;
-                inputMsg.focus();
-            } else {
-                btnConnect.disabled = false;
-                btnConnect.innerText = "📞 Llamar / Conectar";
-                btnConnect.style.background = "#2196F3";
-                inputMsg.disabled = true;
-                btnSend.disabled = true;
-            }
-        }
-
-        function addMessage(text, type) {
-            const chatWindow = document.getElementById('chat-window');
-            const div = document.createElement('div');
-            div.className = `message msg-${type}`;
-            div.innerText = text;
-            chatWindow.appendChild(div);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        function addSystemMessage(text) {
-            const chatWindow = document.getElementById('chat-window');
-            const div = document.createElement('div');
-            div.style.textAlign = 'center';
-            div.style.color = '#aaa';
-            div.style.fontSize = '0.8rem';
-            div.style.margin = '10px 0';
-            div.innerText = `--- ${text} ---`;
-            chatWindow.appendChild(div);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        // Enviar con Enter
-        document.getElementById('msg-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        // --- CÓDIGO EXISTENTE (SIDEBAR Y FEED) ---
-        function switchSidebarTab(tabName) {
-            document.querySelectorAll('.sidebar-content').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-' + tabName).style.display = 'block';
-            event.target.classList.add('active');
-        }
-
-        function generateJsonFile() {
+        function publishPost() {
             const title = document.getElementById('post-title').value.trim();
             const content = document.getElementById('post-content').value.trim();
             const media = document.getElementById('post-media').value.trim();
             const type = document.getElementById('post-type').value;
-
-            if (!title || !content) {
-                alert("Por favor escribe al menos un título y contenido.");
-                return;
-            }
-
-            const newPost = {
-                id: Date.now(),
-                date: new Date().toISOString(),
-                title: title,
-                content: content,
-                media: media || null,
-                type: type === 'none' ? null : type
-            };
-
-            const jsonString = JSON.stringify(newPost, null, 2);
-            const blob = new Blob([jsonString], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "nuevo-post.json";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            alert("Archivo descargado. Abre 'Cómo Usar' para ver los siguientes pasos.");
+            if (!title || !content) return alert("Escribe título y contenido.");
+            const newPost = { id: Date.now(), date: new Date().toISOString(), title, content, media: media || null, type: type === 'none' ? null : type };
+            let currentLocalPosts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+            currentLocalPosts.unshift(newPost);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentLocalPosts));
+            document.getElementById('post-title').value = ''; document.getElementById('post-content').value = ''; document.getElementById('post-media').value = '';
+            alert("✅ Publicado localmente.");
+            if (currentFeedTab === 'my-posts') loadMyPosts();
         }
 
-        const FOLLOWING_SOURCES = [
-            { name: 'Perfil', url: 'https://www.perfil.com/feed/' },
-            { name: 'Defonline', url: 'https://defonline.com.ar/feed/' },
-            { name: 'Wikipedia', url: 'https://es.wikipedia.org/w/index.php?title=Special:Feed&feed=rss&namespace=0' }
-        ];
+        async function exportToJson() {
+            const posts = await loadPostsData();
+            const blob = new Blob([JSON.stringify(posts, null, 2)], { type: "application/json" });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "posts.json"; a.click();
+        }
 
+        function clearLocalData() {
+            if(confirm("¿Borrar locales?")) { localStorage.removeItem(LOCAL_STORAGE_KEY); loadMyPosts(); }
+        }
+
+        // --- SISTEMA DE RAMAS (RSS + MASTODON) ---
+        const DEFAULT_SOURCES = [
+            { name: 'Wikipedia ES', url: 'https://es.wikipedia.org/w/index.php?title=Special:Feed&feed=rss&namespace=0' },
+            { name: 'Perfil (Noticias)', url: 'https://www.perfil.com/feed/' }
+        ];
+        let customSources = JSON.parse(localStorage.getItem('arbolapp_sources') || '[]');
         let currentFeedTab = 'my-posts';
 
-        function switchFeedTab(tab) {
-            currentFeedTab = tab;
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            const container = document.getElementById('feed-container');
-            container.innerHTML = '<div class="loading-frog">🌱 Explorando...</div>';
-            
-            if (tab === 'my-posts') loadMyPosts();
-            else loadBranches();
-        }
-
-        async function loadMyPosts() {
-            const container = document.getElementById('feed-container');
-            try {
-                const response = await fetch('posts.json');
-                const posts = await response.json();
-                container.innerHTML = '';
-                if (posts.length === 0) {
-                     container.innerHTML = `<div style="text-align:center; padding:20px;">El bosque está tranquilo. ¡Crea tu primera hoja!</div>`;
-                     return;
-                }
-                posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-                posts.forEach(post => container.appendChild(createPostCard(post, true)));
-            } catch (error) {
-                container.innerHTML = `<div style="text-align:center; padding:20px;">No hay hojas. Crea tu primer post en el panel izquierdo.</div>`;
-            }
+        function addSource() {
+            const input = document.getElementById('new-source-url');
+            const url = input.value.trim(); if (!url) return;
+            let finalUrl = url, name = "Fuente Externa";
+            if (url.match(/^@[a-zA-Z0-9_-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+                const p = url.split('@'); finalUrl = `https://${p[2]}/@${p[1]}.rss`; name = `Mastodon: ${p[1]}@${p[2]}`;
+            } else if (url.includes('/@')) {
+                try { const u = new URL(url); const user = u.pathname.split('/')[1].replace('@',''); finalUrl = `${u.origin}/@${user}.rss`; name = `Mastodon: ${user}`; } catch(e){}
+            } else { name = new URL(url).hostname; }
+            customSources.push({ name, url: finalUrl });
+            localStorage.setItem('arbolapp_sources', JSON.stringify(customSources));
+            input.value = ''; if (currentFeedTab === 'branches') loadBranches();
         }
 
         async function loadBranches() {
             const container = document.getElementById('feed-container');
-            container.innerHTML = '';
-            for (const source of FOLLOWING_SOURCES) {
+            container.innerHTML = `
+                <div class="source-manager">
+                    <h4>🔗 Agregar nueva rama (RSS o Mastodon)</h4>
+                    <div class="input-group"><input type="text" id="new-source-url" placeholder="URL o @usuario@instancia.social"><button class="btn-action" style="width:auto; margin:0;" onclick="addSource()">Agregar</button></div>
+                </div><div class="loading-frog">🌱 Explorando...</div>`;
+            const allSources = [...DEFAULT_SOURCES, ...customSources];
+            for (const source of allSources) {
                 const sourceHeader = document.createElement('h3');
-                sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0;";
-                sourceHeader.innerText = `🍃 Hojas de la rama: ${source.name}`;
-                container.appendChild(sourceHeader);
+                sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0; margin-top:20px;";
+                sourceHeader.innerText = `🍃 Rama: ${source.name}`; container.appendChild(sourceHeader);
                 try {
-                    const proxy = 'https://api.rss2json.com/v1/api.json?rss_url=';
-                    const res = await fetch(proxy + encodeURIComponent(source.url));
+                    const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(source.url));
                     const data = await res.json();
                     if (data.status === 'ok') {
-                        data.items.slice(0, 3).forEach(item => {
-                            const fakePost = { title: item.title, date: item.pubDate, content: item.description, author: source.name, link: item.link };
-                            container.appendChild(createPostCard(fakePost, false));
+                        data.items.forEach(item => {
+                            container.appendChild(createPostCard({
+                                title: item.title, date: item.pubDate, content: item.description, author: source.name, link: item.link
+                            }, false));
                         });
                     }
-                } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error cargando la rama ${source.name}</div>`; }
+                } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px; font-size:0.8rem;">Error cargando ${source.name}</div>`; }
             }
-            const instructionBox = document.createElement('div');
-            instructionBox.className = 'feed-instruction';
-            instructionBox.innerHTML = `
-                <h4>🌿 ¿Quieres agregar más Ramas?</h4>
-                <p style="font-size:0.9rem; color:#cfd8dc;">Para agregar más periódicos o blogs, abre el archivo <code>index.html</code> y busca la variable <code>FOLLOWING_SOURCES</code>.</p>
-            `;
-            container.appendChild(instructionBox);
+        }
+
+        function switchSidebarTab(n) {
+            document.querySelectorAll('.sidebar-content').forEach(e => e.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById('tab-' + n).style.display = 'block'; event.target.classList.add('active');
+        }
+
+        function switchFeedTab(t) {
+            currentFeedTab = t;
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); event.target.classList.add('active');
+            document.getElementById('feed-container').innerHTML = '<div class="loading-frog">🌱 Cargando...</div>';
+            if (t === 'my-posts') loadMyPosts(); else loadBranches();
+        }
+
+        async function loadMyPosts() {
+            const container = document.getElementById('feed-container'); container.innerHTML = '';
+            (await loadPostsData()).forEach(p => container.appendChild(createPostCard(p, true)));
         }
 
         function createPostCard(post, isOwn) {
-            const card = document.createElement('article');
-            card.className = 'leaf-card';
-            let mediaHtml = '';
-            
+            const card = document.createElement('article'); card.className = 'leaf-card';
+            let media = '';
             if (isOwn && post.media) {
-                const ext = post.media.split('.').pop().toLowerCase();
-                const mediaPath = 'media/' + post.media;
-                if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) mediaHtml = `<div class="media-container"><img src="${mediaPath}" loading="lazy"></div>`;
-                else if (['mp4', 'webm'].includes(ext)) mediaHtml = `<div class="media-container"><video controls><source src="${mediaPath}" type="video/mp4"></video></div>`;
-                else if (['mp3', 'wav'].includes(ext)) mediaHtml = `<div class="media-container"><audio controls src="${mediaPath}"></audio></div>`;
-                else mediaHtml = `<a href="${mediaPath}" target="_blank" class="download-link">📄 Descargar ${post.media}</a>`;
+                const path = 'media/'+post.media; const ext = post.media.split('.').pop().toLowerCase();
+                if (['jpg','png','gif'].includes(ext)) media = `<div class="media-container"><img src="${path}"></div>`;
+                else if (['mp4','webm'].includes(ext)) media = `<div class="media-container"><video controls src="${path}"></video></div>`;
+                else media = `<a href="${path}" class="download-link">Descargar</a>`;
+            } else if (!isOwn) {
+                const m = post.content.match(/src="([^"]+)"/);
+                media = m ? `<div class="media-container"><img src="${m[1]}"></div>` : `<div class="media-container"><img src="https://picsum.photos/seed/${post.title.replace(/\s/g,'')}/600/300" style="opacity:0.8"></div>`;
             }
-            if (!isOwn && post.content) {
-                const match = post.content.match(/src="([^"]+)"/);
-                if (match) mediaHtml = `<div class="media-container"><img src="${match[1]}"></div>`;
-                else {
-                    const seed = post.title.replace(/\s/g, '');
-                    mediaHtml = `<div class="media-container"><img src="https://picsum.photos/seed/${seed}/600/300" style="opacity:0.8"></div>`;
-                }
-            }
-
-            const cleanContent = post.content.replace(/<[^>]*>?/gm, '').substring(0, 300) + '...';
+            const txt = post.content.replace(/<[^>]*>?/gm, '').substring(0, 300) + '...';
             card.innerHTML = `
-                <div class="post-meta">📅 ${new Date(post.date).toLocaleDateString()} ${isOwn ? '✏️ Propio' : '🌳 ' + (post.author || 'Externo')}</div>
-                <h2 class="post-title">${post.title}</h2>
-                ${mediaHtml}
-                <div class="post-content">${isOwn ? post.content : cleanContent} ${!isOwn ? `<br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer en la rama ↗</a>` : ''}</div>
-            `;
+                <div class="post-meta"><span>📅 ${new Date(post.date).toLocaleDateString()}</span><span>${isOwn?'✏️ Propio':'🌳 '+(post.author||'Externo')}</span></div>
+                <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${txt} ${!isOwn?`<br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer ↗</a>`:''}</div>`;
             return card;
         }
-
         document.addEventListener('DOMContentLoaded', () => loadMyPosts());
+
+        // --- LÓGICA P2P CON CIFRADO ---
+        const P2P_FALLBACK_CONFIG = {
+            iceServers: [{ url: 'stun:stun.l.google.com:19302' }, { url: 'stun:stun1.l.google.com:19302' }, { url: 'stun:stun2.l.google.com:19302' }, { url: 'stun:stun3.l.google.com:19302' }, { url: 'stun:stun4.l.google.com:19302' }],
+            debug: 2
+        };
+        let peer = null, conn = null, myId = null;
+
+        window.addEventListener('load', () => {
+            const config = (typeof P2P_CONFIG !== 'undefined') ? P2P_CONFIG : P2P_FALLBACK_CONFIG;
+            peer = new Peer(null, config);
+            peer.on('open', id => { myId = id; if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; });
+            peer.on('connection', c => handleConnection(c));
+            peer.on('error', e => logP2P("Error: " + e.type));
+        });
+
+        function openP2P() { document.getElementById('p2p-modal').showModal(); if(myId) setPhoneStatus('idle'); }
+        function closeP2P() { document.getElementById('p2p-modal').close(); }
+        function copyMyId() { const i = document.getElementById('my-peer-id'); i.select(); document.execCommand('copy'); }
+
+        async function connectToPeer() {
+            const id = document.getElementById('remote-peer-id').value.trim();
+            if(!id) return alert("Ingresa ID remoto");
+            setPhoneStatus('calling');
+            conn = peer.connect(id, { reliable: true });
+            conn.on('open', () => { setPhoneStatus('connected'); enableChat(true); addSystemMessage("Conectado."); });
+            conn.on('data', async (data) => {
+                // Lógica de recepción con intento de descifrado
+                const password = document.getElementById('crypto-password').value;
+                
+                if (data && typeof data === 'object' && data.encrypted) {
+                    if (!password) {
+                        addMessage("🔒 Mensaje cifrado. Ingresa la clave.", 'locked');
+                        return;
+                    }
+                    try {
+                        const decrypted = await decryptMessage(data, password);
+                        addMessage(decrypted, 'received');
+                    } catch (e) {
+                        addMessage("🚫 Error: No se pudo descifrar (¿Clave incorrecta?)", 'error');
+                    }
+                } else {
+                    // Mensaje sin cifrar (texto plano)
+                    addMessage(data, 'received');
+                }
+            });
+            conn.on('close', () => { setPhoneStatus('idle'); enableChat(false); addSystemMessage("Desconectado."); conn = null; });
+        }
+
+        function handleConnection(c) {
+            conn = c;
+            conn.on('open', () => { setPhoneStatus('connected'); enableChat(true); addSystemMessage("Conectado."); });
+            conn.on('data', async (data) => {
+                const password = document.getElementById('crypto-password').value;
+                if (data && typeof data === 'object' && data.encrypted) {
+                    if (!password) { addMessage("🔒 Mensaje cifrado.", 'locked'); return; }
+                    try { const d = await decryptMessage(data, password); addMessage(d, 'received'); }
+                    catch (e) { addMessage("🚫 Error descifrando.", 'error'); }
+                } else { addMessage(data, 'received'); }
+            });
+            conn.on('close', () => { setPhoneStatus('idle'); enableChat(false); conn = null; });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const txt = input.value.trim();
+            if (!txt || !conn) return;
+
+            const password = document.getElementById('crypto-password').value;
+            let payload = txt;
+
+            // Si hay contraseña, cifrar. Si no, enviar plano.
+            if (password) {
+                try {
+                    const encrypted = await encryptMessage(txt, password);
+                    payload = encrypted;
+                    // Mostrar en propio chat ya descifrado
+                    addMessage(txt, 'sent');
+                } catch (e) {
+                    alert("Error cifrando: " + e.message);
+                    return;
+                }
+            } else {
+                addMessage(txt, 'sent');
+            }
+
+            conn.send(payload);
+            input.value = '';
+        }
+
+        function setPhoneStatus(s) {
+            const i = document.getElementById('status-icon');
+            const t = document.getElementById('status-text');
+            if(!i) return;
+            if(s==='idle') { i.className='phone-icon phone-grey'; t.innerText="Desconectado"; }
+            else if(s==='calling') { i.className='phone-icon phone-blue'; t.innerText="Conectando..."; }
+            else if(s==='connected') { i.className='phone-icon phone-green'; t.innerText="En línea (E2E)"; }
+        }
+
+        function enableChat(e) {
+            const b = document.getElementById('btn-connect');
+            const i = document.getElementById('msg-input');
+            const s = document.getElementById('btn-send');
+            if(e) { b.disabled=true; b.innerText="Conectado"; b.style.background="#4CAF50"; i.disabled=false; s.disabled=false; i.focus(); }
+            else { b.disabled=false; b.innerText="📞 Conectar"; b.style.background="#2196F3"; i.disabled=true; s.disabled=true; }
+        }
+
+        function addMessage(txt, type) {
+            const w = document.getElementById('chat-window');
+            const d = document.createElement('div');
+            d.className = `message msg-${type}`;
+            d.innerText = txt;
+            w.appendChild(d); w.scrollTop = w.scrollHeight;
+        }
+
+        function addSystemMessage(txt) {
+            const w = document.getElementById('chat-window');
+            const d = document.createElement('div');
+            d.style.cssText = "text-align:center;color:#aaa;font-size:0.8rem;margin:10px 0;";
+            d.innerText = `--- ${txt} ---`;
+            w.appendChild(d); w.scrollTop = w.scrollHeight;
+        }
+        document.getElementById('msg-input').addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
     </script>
 </body>
 </html>
