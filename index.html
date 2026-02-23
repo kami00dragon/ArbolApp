@@ -449,9 +449,20 @@
 
         // --- SISTEMA DE RAMAS (RSS + MASTODON) ---
         const DEFAULT_SOURCES = [
-            { name: 'Wikipedia ES', url: 'https://es.wikipedia.org/w/index.php?title=Special:Feed&feed=rss&namespace=0' },
-            { name: 'Perfil (Noticias)', url: 'https://www.perfil.com/feed/' }
-        ];
+    { name: 'Perfil (Noticias)', url: 'https://www.perfil.com/feed/' },
+    
+    // --- MIS SEGUIMIENTOS DE MASTODON (RSS DIRECTO) ---
+    { name: 'Simon Willison (IA)', url: 'https://fedi.simonwillison.net/@simon.rss' },
+    { name: 'The Verge (Tech)', url: 'https://mastodon.social/@theverge.rss' },
+    { name: 'Hugging Face (IA)', url: 'https://huggingface.social/@huggingface.rss' },
+    { name: 'DistroTube (Linux)', url: 'https://fosstodon.org/@distrotube.rss' },
+    { name: 'FSFE (Software Libre)', url: 'https://fosstodon.org/@fsfe.rss' },
+    { name: 'Jeremy Keith (Web)', url: 'https://adactio.com/@adactio.rss' },
+    { name: 'Malditos Nerds (Divulgación)', url: 'https://troet.cafe/@malditosnerds.rss' },
+    { name: 'Nahle Barco (Ciencia)', url: 'https://social.guays.eu/@nahle.rss' },
+    { name: 'El País Cultura', url: 'https://mastodon.social/@elpais_cultura.rss' },
+    { name: 'Gretchen McCulloch (Lingüística)', url: 'https://wandering.shop/@gretchenmcculloch.rss' }
+];
         let customSources = JSON.parse(localStorage.getItem('arbolapp_sources') || '[]');
         let currentFeedTab = 'my-posts';
 
