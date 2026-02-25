@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <style>
-        /* --- ESTILOS COMPLETOS (Sin cambios visuales) --- */
+        /* --- ESTILOS COMPLETOS --- */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -100,8 +100,14 @@
 
         .p2p-controls { display: flex; flex-direction: column; gap: 10px; }
         .p2p-row { display: flex; gap: 10px; align-items: stretch; }
-        #msg-input { flex-grow: 1; background: #2a1b15; border: 1px solid #795548; color: #fff; padding: 10px; border-radius: 5px; font-family: inherit; resize: none; min-height: 50px; font-size: 1rem; }
+        
+        /* Input de mensaje: HABILITADO POR DEFECTO PARA PERMITIR ESCRIBIR ANTES DE CONECTAR */
+        #msg-input { 
+            flex-grow: 1; background: #2a1b15; border: 1px solid #795548; color: #fff; padding: 10px; border-radius: 5px; font-family: inherit; resize: none; min-height: 50px; font-size: 1rem; 
+        }
+        #msg-input:disabled { background: #221; color: #555; cursor: not-allowed; opacity: 0.6; }
         #msg-input:focus { outline: 2px solid var(--leaf-green); }
+
         .btn-send { background: var(--flower-pink); color: white; border: none; padding: 0 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; min-width: 60px; }
         .btn-send:hover { background: #c2185b; }
         .btn-send:disabled { background: #555; cursor: not-allowed; }
@@ -271,8 +277,9 @@
                     <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Conectar</button>
                 </div>
                 <div class="p2p-row">
-                    <textarea id="msg-input" placeholder="Escribe tu mensaje aquí... (Se envía al conectar o enviar)" disabled></textarea>
-                    <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
+                    <!-- NOTA: No tiene 'disabled' para permitir escribir desde el inicio -->
+                    <textarea id="msg-input" placeholder="Escribe aquí... (Se envía al conectar o enviar)"></textarea>
+                    <button id="btn-send" onclick="sendMessage()">➤</button>
                 </div>
             </div>
         </div>
@@ -306,17 +313,17 @@
 
         // --- VARIABLES GLOBALES ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
-        const PEER_ID_KEY = 'arbolapp_peer_id_v5';
+        const PEER_ID_KEY = 'arbolapp_peer_id_v6';
         const CONTACTS_KEY = 'arbolapp_contacts';
-        const PENDING_MSGS_KEY = 'arbolapp_pending_msgs'; // Clave para cola de pendientes
-        const CHAT_HISTORY_KEY = 'arbolapp_chat_history_'; // Prefijo para historial
+        const PENDING_MSGS_KEY = 'arbolapp_pending_msgs'; 
+        const CHAT_HISTORY_KEY = 'arbolapp_chat_history_'; 
         const ENC_SALT = "arbolapp-static-salt-v1";
         
         let peer = null, conn = null, myId = null;
         let pendingConnection = null; 
         let connectionTimeout = null;
         let contacts = [];
-        let pendingOutboundMessage = null; // Mensaje que se envía justo al conectar
+        let pendingOutboundMessage = null; 
 
         // --- CRIPTOGRAFÍA ---
         async function getCryptoKey(password) {
@@ -436,13 +443,13 @@
             const remoteId = document.getElementById('remote-peer-id').value.trim();
             if (!remoteId) return alert("Ingresa ID remoto");
             
-            // 1. CHECK CRÍTICO: Si hay texto en el input, lo guardamos como "Mensaje Inicial"
+            // 1. Capturar mensaje inicial ANTES de conectar
             const msgInput = document.getElementById('msg-input');
             const txt = msgInput.value.trim();
             if (txt) {
                 pendingOutboundMessage = txt;
-                msgInput.value = ''; // Limpiar input para no duplicar
-                addSystemMessage("Mensaje preparado. Se enviará al conectar...");
+                msgInput.value = ''; // Limpiar para que el usuario sepa que ya está "cargado"
+                addSystemMessage("Mensaje capturado. Se enviará al conectar...");
             }
 
             if(conn && conn.open) conn.close();
@@ -465,23 +472,23 @@
                 clearTimeout(connectionTimeout);
                 logP2P("Conexión establecida.");
                 setPhoneStatus('connected'); 
-                enableChat(true); 
                 
-                // Cargar historial previo
+                // Cargar historial
                 loadChatHistory(remoteId);
                 addSystemMessage("Conectado.");
 
-                // 2. ENVIAR MENSAJE INMEDIATO (La petición del usuario)
+                // 2. ENVIAR MENSAJE CAPTURADO
                 if (pendingOutboundMessage) {
-                    // Procesar envío inmediato (cifrado o plano)
                     processAndSend(pendingOutboundMessage);
-                    // Mostrar en chat local
                     addMessage(pendingOutboundMessage, 'sent');
                     pendingOutboundMessage = null;
                 }
 
-                // 3. ENVIAR MENSAJES PENDIENTES (Cola)
+                // 3. ENVIAR COLA DE PENDIENTES
                 flushPendingMessages(remoteId);
+                
+                // Habilitar chat normal para seguir escribiendo
+                enableChat(true); 
             });
 
             conn.on('data', handleIncomingData);
@@ -510,7 +517,6 @@
 
             if (!document.getElementById('p2p-modal').open()) openP2P();
 
-            // Usar .open() explícito
             conn.on('open', () => {
                 logP2P("Conexión entrante abierta.");
                 setPhoneStatus('connected'); 
@@ -520,7 +526,7 @@
                 loadChatHistory(peerId);
                 addSystemMessage("Conectado.");
                 
-                // Enviar pendientes para este peer si los hay
+                // Enviar pendientes
                 flushPendingMessages(peerId);
             });
             
@@ -554,9 +560,8 @@
             if (queue[remoteId] && queue[remoteId].length > 0) {
                 addSystemMessage(`Enviando ${queue[remoteId].length} mensajes pendientes...`);
                 queue[remoteId].forEach(msg => {
-                    // Reenviar usando el proceso estándar
                     processAndSend(msg);
-                    addMessage(msg, 'sent'); // Volver a mostrar como enviado en UI
+                    addMessage(msg, 'sent'); 
                 });
                 delete queue[remoteId];
                 savePendingQueue(queue);
@@ -569,7 +574,6 @@
             const password = document.getElementById('crypto-password').value;
             let finalText = "";
 
-            // Descifrado si es necesario
             if (data && typeof data === 'object' && data.encrypted) {
                 if (!password) { 
                     addMessage("🔒 Mensaje cifrado.", 'locked'); 
@@ -586,7 +590,6 @@
             }
 
             addMessage(finalText, 'received');
-            // Guardar en historial
             saveMessageToHistory(peerId, finalText, 'received');
         }
 
@@ -606,14 +609,14 @@
             } else {
                 // Si no, guardar como pendiente
                 savePendingMessage(remoteId, txt);
-                addMessage(txt, 'sent'); // Se muestra como enviado visualmente, pero se marca
+                addMessage(txt, 'sent'); 
                 addSystemMessage("(Guardado como pendiente. Se enviará al conectar.)");
-                addMessage(txt, 'pending'); // Marca visual
+                addMessage(txt, 'pending'); 
                 input.value = '';
             }
         }
 
-        // Función central para enviar (Cifra si hay pass, o plano)
+        // Función central para enviar
         async function processAndSend(text) {
             const password = document.getElementById('crypto-password').value;
             let payload = text;
@@ -631,7 +634,7 @@
             savePendingQueue(queue);
         }
 
-        // --- HISTORIAL DE CHAT (Persistente en el navegador) ---
+        // --- HISTORIAL DE CHAT ---
         function saveMessageToHistory(peerId, text, type) {
             const key = CHAT_HISTORY_KEY + peerId;
             const history = JSON.parse(localStorage.getItem(key) || '[]');
@@ -641,7 +644,7 @@
 
         function loadChatHistory(peerId) {
             const w = document.getElementById('chat-window');
-            w.innerHTML = ''; // Limpiar
+            w.innerHTML = ''; 
             const key = CHAT_HISTORY_KEY + peerId;
             const history = JSON.parse(localStorage.getItem(key) || '[]');
             history.forEach(h => {
@@ -654,9 +657,27 @@
             w.scrollTop = w.scrollHeight;
         }
 
-        // --- INTERFAZ ---
-        function openP2P() { document.getElementById('p2p-modal').showModal(); if(myId) setPhoneStatus('idle'); }
-        function closeP2P() { document.getElementById('p2p-modal').close(); }
+        // --- INTERFAZ (MODIFICADA PARA HABILITAR INPUT) ---
+        function openP2P() { 
+            document.getElementById('p2p-modal').showModal(); 
+            if(myId) setPhoneStatus('idle');
+            
+            // FIX: Habilitar input inmediatamente al abrir
+            const input = document.getElementById('msg-input');
+            const btnSend = document.getElementById('btn-send');
+            input.disabled = false;
+            btnSend.disabled = false;
+            input.placeholder = "Escribe aquí. Pulsa 'Conectar' para enviar con la llamada, o 'Enviar' para guardar.";
+            input.focus();
+        }
+        
+        function closeP2P() { 
+            document.getElementById('p2p-modal').close();
+            // Opcional: Deshabilitar al cerrar
+            document.getElementById('msg-input').disabled = true;
+            document.getElementById('btn-send').disabled = true;
+        }
+
         function copyMyId() { 
             const i = document.getElementById('my-peer-id'); i.select(); 
             navigator.clipboard.writeText(i.value).then(() => alert("ID copiado")).catch(() => document.execCommand('copy'));
@@ -672,15 +693,13 @@
         }
 
         function enableChat(e) {
+            // Esta función ahora se usa sobre todo para confirmar estado visual, 
+            // pero la habilitación real está en openP2P.
             const b = document.getElementById('btn-connect');
-            const i = document.getElementById('msg-input');
-            const s = document.getElementById('btn-send');
             if(e) { 
                 b.disabled=true; b.innerText="Conectado"; b.style.background="#4CAF50"; 
-                i.disabled=false; s.disabled=false; i.focus(); 
             } else { 
                 b.disabled=false; b.innerText="📞 Conectar"; b.style.background="#2196F3"; 
-                i.disabled=true; s.disabled=true; 
             }
         }
 
