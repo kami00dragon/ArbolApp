@@ -166,7 +166,7 @@
         .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 580px; }
         .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.75rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
-        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; }
+        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; display: flex; flex-direction: column; }
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; }
         .msg-received { background: #555; color: white; align-self: flex-start; }
@@ -435,7 +435,7 @@
         let peer = null, conn = null, myId = null;
         let pendingConnection = null; 
         let connectionTimeout = null;
-        let isKeyActive = false; // Nuevo estado
+        let isKeyActive = false;
 
         // --- CRIPTOGRAFÍA ---
         async function getCryptoKey(password) {
@@ -522,10 +522,13 @@
             const modal = document.getElementById('incoming-modal');
             modal.close();
             logP2P("Conexión aceptada.");
+            
             conn = pendingConnection;
             pendingConnection = null;
+            
             const p2pModal = document.getElementById('p2p-modal');
             if (!p2pModal.open) p2pModal.showModal();
+            
             handleConnection(conn);
         }
 
@@ -573,7 +576,7 @@
                 enableChat(false); 
                 conn = null; 
                 addSystemMessage("Desconectado.");
-                resetKeyUI(); // Resetear clave al desconectar
+                resetKeyUI();
             });
 
             conn.on('error', (err) => {
@@ -583,22 +586,32 @@
             });
         }
 
+        // --- CORRECCIÓN PRINCIPAL: handleConnection ahora habilita el chat ---
         function handleConnection(connection) {
+            // Asegurar que conn global esté actualizado
+            if (!conn) conn = connection;
+            
             connection.on('open', () => {
-                logP2P("Llamada aceptada exitosamente.");
+                logP2P("Conexión de datos lista.");
                 setPhoneStatus('connected'); 
-                enableChat(true); 
+                enableChat(true); // ✅ CRÍTICO: Habilitar controles de chat
                 addSystemMessage("Conectado. Establece la clave para cifrar.");
             });
+
             connection.on('data', handleIncomingData);
+
             connection.on('close', () => {
-                logP2P("El otro usuario se ha ido.");
+                logP2P("Conexión cerrada por el par.");
                 setPhoneStatus('idle'); 
                 enableChat(false); 
                 conn = null; 
                 resetKeyUI();
             });
-            connection.on('error', (err) => logP2P("Error en sesión: " + err));
+
+            connection.on('error', (err) => {
+                logP2P("Error en conexión: " + err);
+                setPhoneStatus('idle');
+            });
         }
 
         // --- NUEVO SISTEMA DE CLAVE (BOTÓN) ---
@@ -626,7 +639,6 @@
             logP2P("Clave de cifrado establecida.");
 
             // 2. Enviar Handshake (Saludo) para confirmar el canal
-            // Esto desbloquea cualquier sensación de "trabado" y confirma al otro usuario
             try {
                 conn.send({ type: 'HANDSHAKE', msg: 'KEY_READY' });
                 addSystemMessage("Has activado el cifrado. El otro usuario ha sido notificado.");
