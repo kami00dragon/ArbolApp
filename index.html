@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre (E2E)</title>
-    <!-- 1. Librería PeerJS -->
+    <!-- 1. Librería PeerJS (Versión estable) -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- 2. TU CONFIGURACIÓN P2P EXTERNA -->
-    <script src="p2p-config.js"></script>
-    <!-- 3. ENLAZE AL RSS PARA MASTODON -->
+    
+    <!-- 2. ENLAZE AL RSS PARA MASTODON -->
     <link rel="alternate" type="application/rss+xml" title="Feed de ArbolApp" href="rss.xml">
     
     <style>
@@ -377,6 +376,22 @@
     </dialog>
 
     <script>
+        // --- CONFIGURACIÓN P2P ROBUSTA INTEGRADA ---
+        // Usamos múltiples servidores STUN para asegurar conexión tras NATs y Firewalls.
+        // Esto hace la comunicación más resistente a caídas de servidor.
+        const P2P_CONFIG = {
+            debug: 2, // 0=none, 1=errors, 2=warnings, 3=all
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+                // Servidores STUN adicionales para mayor robustez
+                { urls: 'stun:stun.services.mozilla.com' }
+            ]
+        };
+
         // --- GESTIÓN DE ESTADO Y DATOS ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         const INITIAL_DATA = [];
@@ -559,64 +574,187 @@
         }
         document.addEventListener('DOMContentLoaded', () => loadMyPosts());
 
-        // --- LÓGICA P2P CON CIFRADO ---
-        const P2P_FALLBACK_CONFIG = {
-            iceServers: [{ url: 'stun:stun.l.google.com:19302' }, { url: 'stun:stun1.l.google.com:19302' }, { url: 'stun:stun2.l.google.com:19302' }, { url: 'stun:stun3.l.google.com:19302' }, { url: 'stun:stun4.l.google.com:19302' }],
-            debug: 2
-        };
+        // --- LÓGICA P2P CON CIFRADO (REPARADA Y ROBUSTA) ---
         let peer = null, conn = null, myId = null;
 
         window.addEventListener('load', () => {
-            const config = (typeof P2P_CONFIG !== 'undefined') ? P2P_CONFIG : P2P_FALLBACK_CONFIG;
-            peer = new Peer(null, config);
-            peer.on('open', id => { myId = id; if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; });
-            peer.on('connection', c => handleConnection(c));
-            peer.on('error', e => logP2P("Error: " + e.type));
+            logP2P("Iniciando PeerJS con configuración robusta...");
+            
+            // Inicializamos Peer con la configuración interna definida arriba
+            // No dependemos de archivos externos
+            peer = new Peer(null, P2P_CONFIG);
+
+            peer.on('open', id => { 
+                myId = id; 
+                logP2P("Nodo ID asignado: " + myId);
+                if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; 
+            });
+
+            peer.on('connection', c => {
+                logP2P("Conexión entrante detectada...");
+                handleConnection(c);
+            });
+
+            peer.on('error', e => { 
+                console.error(e);
+                logP2P("Error P2P: " + e.type); 
+                // En caso de error de servidor, intentar reconectar o avisar al usuario
+                if(e.type === 'peer-unavailable') {
+                    addSystemMessage("Usuario no encontrado o desconectado.");
+                    setPhoneStatus('idle');
+                } else if (e.type === 'network') {
+                    addSystemMessage("Error de red. Comprueba tu conexión.");
+                }
+            });
+            
+            peer.on('disconnected', () => {
+                logP2P("Desconectado del servidor de señalización. Intentando reconexión...");
+                // Si solo perdimos conexión con el servidor de señales pero el data channel sigue abierto,
+                // podríamos seguir chateando. PeerJS intenta reconectar automáticamente.
+            });
         });
 
-        function openP2P() { document.getElementById('p2p-modal').showModal(); if(myId) setPhoneStatus('idle'); }
-        function closeP2P() { document.getElementById('p2p-modal').close(); }
-        function copyMyId() { const i = document.getElementById('my-peer-id'); i.select(); document.execCommand('copy'); }
+        function openP2P() { 
+            document.getElementById('p2p-modal').showModal(); 
+            if(myId) {
+                setPhoneStatus('idle');
+                logP2P("Sistema P2P listo. ID: " + myId);
+            } else {
+                logP2P("Obteniendo ID...");
+            }
+        }
+        
+        function closeP2P() { 
+            document.getElementById('p2p-modal').close(); 
+        }
+
+        function copyMyId() { 
+            const i = document.getElementById('my-peer-id'); 
+            i.select(); 
+            document.execCommand('copy'); 
+            alert("ID copiado al portapapeles");
+        }
 
         async function connectToPeer() {
             const id = document.getElementById('remote-peer-id').value.trim();
             if(!id) return alert("Ingresa ID remoto");
+            
+            // Prevenir múltiples conexiones
+            if(conn && conn.open) {
+                if(!confirm("Ya estás conectado. ¿Desconectar y llamar a otro?")) return;
+                conn.close();
+            }
+
             setPhoneStatus('calling');
+            logP2P("Llamando a " + id + "...");
+            
             conn = peer.connect(id, { reliable: true });
-            conn.on('open', () => { setPhoneStatus('connected'); enableChat(true); addSystemMessage("Conectado."); });
+            
+            conn.on('open', () => { 
+                logP2P("Conexión establecida.");
+                setPhoneStatus('connected'); 
+                enableChat(true); 
+                addSystemMessage("Conectado."); 
+            });
+            
             conn.on('data', async (data) => {
                 const password = document.getElementById('crypto-password').value;
+                // Manejo seguro de datos
                 if (data && typeof data === 'object' && data.encrypted) {
-                    if (!password) { addMessage("🔒 Mensaje cifrado. Ingresa la clave.", 'locked'); return; }
-                    try { const decrypted = await decryptMessage(data, password); addMessage(decrypted, 'received'); } catch (e) { addMessage("🚫 Error: No se pudo descifrar (¿Clave incorrecta?)", 'error'); }
-                } else { addMessage(data, 'received'); }
+                    if (!password) { 
+                        addMessage("🔒 Mensaje cifrado. Ingresa la clave.", 'locked'); 
+                        return; 
+                    }
+                    try { 
+                        const decrypted = await decryptMessage(data, password); 
+                        addMessage(decrypted, 'received'); 
+                    } catch (e) { 
+                        console.error(e);
+                        addMessage("🚫 Error: No se pudo descifrar (¿Clave incorrecta?)", 'error'); 
+                    }
+                } else { 
+                    addMessage(data, 'received'); 
+                }
             });
-            conn.on('close', () => { setPhoneStatus('idle'); enableChat(false); addSystemMessage("Desconectado."); conn = null; });
+
+            conn.on('close', () => { 
+                logP2P("Conexión cerrada.");
+                setPhoneStatus('idle'); 
+                enableChat(false); 
+                addSystemMessage("Desconectado."); 
+                conn = null; 
+            });
+
+            conn.on('error', err => {
+                logP2P("Error en conexión: " + err);
+                addSystemMessage("Error de conexión.");
+            });
         }
 
         function handleConnection(c) {
             conn = c;
-            conn.on('open', () => { setPhoneStatus('connected'); enableChat(true); addSystemMessage("Conectado."); });
+            logP2P("Gestionando conexión entrante...");
+            
+            conn.on('open', () => { 
+                logP2P("Sesión iniciada.");
+                setPhoneStatus('connected'); 
+                enableChat(true); 
+                addSystemMessage("Conectado."); 
+            });
+
             conn.on('data', async (data) => {
                 const password = document.getElementById('crypto-password').value;
                 if (data && typeof data === 'object' && data.encrypted) {
-                    if (!password) { addMessage("🔒 Mensaje cifrado.", 'locked'); return; }
-                    try { const d = await decryptMessage(data, password); addMessage(d, 'received'); } catch (e) { addMessage("🚫 Error descifrando.", 'error'); }
-                } else { addMessage(data, 'received'); }
+                    if (!password) { 
+                        addMessage("🔒 Mensaje cifrado.", 'locked'); 
+                        return; 
+                    }
+                    try { 
+                        const d = await decryptMessage(data, password); 
+                        addMessage(d, 'received'); 
+                    } catch (e) { 
+                        addMessage("🚫 Error descifrando.", 'error'); 
+                    }
+                } else { 
+                    addMessage(data, 'received'); 
+                }
             });
-            conn.on('close', () => { setPhoneStatus('idle'); enableChat(false); conn = null; });
+
+            conn.on('close', () => { 
+                logP2P("El otro usuario se ha ido.");
+                setPhoneStatus('idle'); 
+                enableChat(false); 
+                conn = null; 
+            });
+            
+            conn.on('error', err => {
+                logP2P("Error en sesión: " + err);
+            });
         }
 
         async function sendMessage() {
             const input = document.getElementById('msg-input');
             const txt = input.value.trim();
-            if (!txt || !conn) return;
+            if (!txt || !conn || !conn.open) return;
+            
             const password = document.getElementById('crypto-password').value;
             let payload = txt;
+            
             if (password) {
-                try { const encrypted = await encryptMessage(txt, password); payload = encrypted; addMessage(txt, 'sent'); } catch (e) { alert("Error cifrando: " + e.message); return; }
-            } else { addMessage(txt, 'sent'); }
-            conn.send(payload); input.value = '';
+                try { 
+                    const encrypted = await encryptMessage(txt, password); 
+                    payload = encrypted; 
+                    addMessage(txt, 'sent'); 
+                } catch (e) { 
+                    alert("Error cifrando: " + e.message); 
+                    return; 
+                }
+            } else { 
+                addMessage(txt, 'sent'); 
+            }
+            
+            conn.send(payload); 
+            input.value = '';
         }
 
         function setPhoneStatus(s) {
@@ -650,6 +788,7 @@
             d.innerText = `--- ${txt} ---`;
             w.appendChild(d); w.scrollTop = w.scrollHeight;
         }
+        
         document.getElementById('msg-input').addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
 
         // --- GENERADOR RSS ---
