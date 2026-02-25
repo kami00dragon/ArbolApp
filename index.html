@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArbolApp - Red Social Libre (Corregido)</title>
+    <title>ArbolApp - Red Social Libre (Conexión Blindada)</title>
     <!-- Librería PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
@@ -240,7 +240,7 @@
     <!-- MODAL CHAT P2P -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
-            <h3>🔒 Chat P2P</h3>
+            <h3>🔒 Chat P2P (Modo Blindado)</h3>
             <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
         <div class="p2p-status-area">
@@ -248,7 +248,7 @@
             <div id="status-text" style="margin-top:5px; font-weight:bold;">Desconectado</div>
         </div>
         <div class="p2p-body">
-            <div id="p2p-log" class="p2p-log">Iniciando...</div>
+            <div id="p2p-log" class="p2p-log">Iniciando red P2P Blindada...</div>
             
             <!-- Cifrado -->
             <div style="margin-bottom: 10px;">
@@ -273,7 +273,7 @@
 
             <div class="p2p-controls">
                 <div class="p2p-row">
-                    <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Conectar</button>
+                    <button class="btn-call" id="btn-connect" onclick="connectToPeer()">🚀 Conectar (Túnel Blindado)</button>
                 </div>
                 <div class="p2p-row">
                     <textarea id="msg-input" placeholder="Escribe aquí... (Se envía al conectar o enviar)"></textarea>
@@ -297,21 +297,39 @@
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN ---
+        // --- CONFIGURACIÓN P2P "BLINDADA" (Todos los servidores públicos a la vez) ---
+        // Incluye STUN de Google, Microsoft, Twilio, Mozilla, etc.
         const P2P_CONFIG = {
             iceServers: [
-                { url: 'stun:stun.l.google.com:19302' },
-                { url: 'stun:stun1.l.google.com:19302' },
-                { url: 'stun:stun2.l.google.com:19302' },
-                { url: 'stun:stun3.l.google.com:19302' },
-                { url: 'stun:stun4.l.google.com:19302' }
+                // Google STUN (Varios puertos)
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+                { urls: 'stun:stun5.l.google.com:19302' },
+                // Microsoft STUN
+                { urls: 'stun:stun.microsoft.com:3478' },
+                // Twilio STUN (Muy confiable)
+                { urls: 'stun:global.stun.twilio.com:3478?transport=udp' },
+                { urls: 'stun:global.stun.twilio.com:3478?transport=tcp' },
+                // Mozilla / MIST
+                { urls: 'stun:stun.services.mozilla.com:3478' },
+                // Otros públicos comunes
+                { urls: 'stun:stun.nextcloud.com:443' },
+                { urls: 'stun:stun.sipgate.net:10000' },
+                { urls: 'stun:217.10.68.152:10000' },
+                // INTENTO DE TURN (OpenRelay - puede fallar sin key, pero lo intentamos)
+                // Si esto falla, fallback a STUN
+                { urls: 'stun:openrelay.metered.ca:80' },
+                // { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' } // No usamos credenciales fijas por seguridad
             ],
             debug: 2
         };
 
         // --- VARIABLES GLOBALES ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
-        const PEER_ID_KEY = 'arbolapp_peer_id_v7';
+        const PEER_ID_KEY = 'arbolapp_peer_id_v8';
         const CONTACTS_KEY = 'arbolapp_contacts';
         const PENDING_MSGS_KEY = 'arbolapp_pending_msgs'; 
         const CHAT_HISTORY_KEY = 'arbolapp_chat_history_'; 
@@ -322,6 +340,7 @@
         let connectionTimeout = null;
         let contacts = [];
         let pendingOutboundMessage = null; 
+        let lastReceivedMessage = ""; // Para deduplicación
 
         // --- CRIPTOGRAFÍA ---
         async function getCryptoKey(password) {
@@ -358,13 +377,13 @@
         window.addEventListener('load', () => {
             loadContacts();
             let savedId = localStorage.getItem(PEER_ID_KEY);
-            logP2P("Iniciando nodo (ID: " + (savedId ? "Persistente" : "Nuevo") + ")...");
+            logP2P("Iniciando nodo P2P Blindado...");
             peer = new Peer(savedId, P2P_CONFIG);
 
             peer.on('open', (id) => { 
                 myId = id;
                 localStorage.setItem(PEER_ID_KEY, id);
-                logP2P("Red lista. Tu ID: " + id);
+                logP2P("Red Blindada lista. Tu ID: " + id);
                 if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; 
                 if(document.getElementById('p2p-modal').open) setPhoneStatus('idle');
             });
@@ -374,9 +393,12 @@
                     logP2P("ID en uso. Regenerando...");
                     localStorage.removeItem(PEER_ID_KEY);
                     location.reload(); 
+                } else if(err.type === 'peer-unavailable') {
+                    logP2P("Peer no encontrado o desconectado.");
+                    setPhoneStatus('idle');
                 } else {
                     console.error(err); logP2P("Error: " + err.type);
-                    alert("Error P2P (" + err.type + ")");
+                    // No alertamos errores de red comunes, solo lo logueamos para no ser molesto
                 }
             });
 
@@ -451,22 +473,22 @@
 
             if(conn && conn.open) conn.close();
             setPhoneStatus('calling');
-            logP2P("Conectando a: " + remoteId);
+            logP2P("Intentando conectar a: " + remoteId + " (Bombardeo ICE activado)");
 
             conn = peer.connect(remoteId, { reliable: true });
 
             connectionTimeout = setTimeout(() => {
                 if (!conn.open) {
-                    logP2P("Timeout. Revisa red.");
+                    logP2P("Timeout (15s). Posible Firewall estricto.");
                     setPhoneStatus('idle');
-                    alert("Tiempo agotado.");
+                    alert("Tiempo agotado. Si ambos tienen la conexión, podrían estar tras NAT simétricos que requieren un servidor TURN pago.");
                     if(conn) conn.close();
                 }
             }, 15000);
 
             conn.on('open', () => {
                 clearTimeout(connectionTimeout);
-                logP2P("Conexión establecida (Caller).");
+                logP2P("¡Conexión Establecida! Túnel abierto.");
                 setPhoneStatus('connected'); 
                 
                 loadChatHistory(remoteId);
@@ -491,13 +513,12 @@
                 addSystemMessage("Desconectado.");
             });
             conn.on('error', (err) => {
-                logP2P("Error: " + err.type);
+                logP2P("Error conexión: " + err.type);
                 setPhoneStatus('idle');
-                alert("Error de conexión: " + err.type);
             });
         }
 
-        // --- MANEJO DE LLAMADAS ENTRANTES (CORREGIDO) ---
+        // --- MANEJO DE LLAMADAS ENTRANTES ---
         function acceptIncomingCall() {
             if (!pendingConnection) return;
             document.getElementById('incoming-modal').close();
@@ -509,15 +530,13 @@
             if (!document.getElementById('p2p-modal').open()) openP2P();
 
             conn.on('open', () => {
-                logP2P("Conexión abierta (Receiver).");
+                logP2P("Conexión abierta.");
                 setPhoneStatus('connected'); 
                 enableChat(true); 
                 
                 const peerId = conn.peer;
                 loadChatHistory(peerId);
                 addSystemMessage("Conectado.");
-                
-                // Enviar pendientes
                 flushPendingMessages(peerId);
             });
             
@@ -530,7 +549,6 @@
             });
             conn.on('error', (err) => logP2P("Error sesión: " + err));
 
-            // --- EL ARREGLO CRÍTICO: ABRIR EL CANAL ---
             conn.open();
         }
 
@@ -565,6 +583,18 @@
 
         // --- MENSAJERÍA ---
         async function handleIncomingData(data) {
+            // DEDUPLICACIÓN: Si el mensaje es igual al último, ignorar
+            let contentToCompare = "";
+            if (typeof data === 'string') contentToCompare = data;
+            else if (typeof data === 'object') contentToCompare = JSON.stringify(data);
+
+            if (contentToCompare === lastReceivedMessage) {
+                logP2P("Duplicado ignorado.");
+                return;
+            }
+            lastReceivedMessage = contentToCompare;
+
+            // Procesar mensaje
             const peerId = conn.peer;
             const password = document.getElementById('crypto-password').value;
             let finalText = "";
@@ -686,7 +716,7 @@
             if(e) { 
                 b.disabled=true; b.innerText="Conectado"; b.style.background="#4CAF50"; 
             } else { 
-                b.disabled=false; b.innerText="📞 Conectar"; b.style.background="#2196F3"; 
+                b.disabled=false; b.innerText="🚀 Conectar (Túnel Blindado)"; b.style.background="#2196F3"; 
             }
         }
 
