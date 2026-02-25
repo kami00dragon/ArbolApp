@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArbolApp - Red Social Libre (Estable)</title>
+    <title>ArbolApp - Red Social Libre (Híbrida)</title>
     <!-- Librería PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <style>
-        /* --- ESTILOS COMPLETOS --- */
+        /* --- ESTILOS COMPLETOS (Sin cambios visuales) --- */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -25,7 +25,6 @@
         .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
         .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
 
-        /* Formularios y UI General */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ffcc80; }
         .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; background: #3e2723; border: 1px solid #795548; color: #efebe9; border-radius: 4px; font-family: inherit; box-sizing: border-box; }
@@ -37,7 +36,7 @@
         .btn-secondary { width: 100%; padding: 10px; background: #5d4037; color: white; border: 1px solid #8d6e63; border-radius: 5px; font-size: 0.9rem; cursor: pointer; margin-top: 5px; }
         .btn-secondary:hover { background: #4e342e; }
 
-        /* Agenda de Contactos */
+        /* Agenda */
         .contact-list { list-style: none; padding: 0; margin: 0; }
         .contact-item { background: rgba(0,0,0,0.2); padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; transition: background 0.2s; }
         .contact-item:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
@@ -47,7 +46,7 @@
         .btn-delete-contact { background: none; border: none; color: #e53935; cursor: pointer; font-size: 1.1rem; padding: 0 5px; }
         .btn-delete-contact:hover { color: #ff5252; }
 
-        /* Feed Principal */
+        /* Feed */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
         .tree-trunk { max-width: 700px; margin: 0 auto; min-height: 100vh; border-left: 8px solid var(--leaf-green); border-right: 8px solid var(--leaf-green); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         .feed-header { background-color: var(--leaf-green); padding: 15px 20px; text-align: center; border-bottom: 5px solid var(--leaf-light); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;}
@@ -81,7 +80,6 @@
         .p2p-header { background: var(--leaf-green); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--flower-pink); }
         .p2p-status-area { text-align: center; padding: 10px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-stem); }
         
-        /* Iconos y Animaciones */
         .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 5px; }
         .phone-blue { color: #2196F3; animation: ringing 1.5s infinite ease-in-out; }
         .phone-green { color: #4CAF50; }
@@ -91,7 +89,6 @@
         .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 550px; }
         .p2p-log { height: 50px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.75rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
-        /* Chat */
         .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; }
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; }
@@ -99,6 +96,7 @@
         .msg-error { background: #511; color: #ffcccc; border: 1px solid #f00; font-size: 0.8rem; }
         .msg-locked { background: #443300; color: #ffecb3; border: 1px solid #ffb300; font-style: italic; }
         .msg-system { color: #aaa; text-align: center; font-size: 0.8rem; font-style: italic; margin: 5px 0; }
+        .msg-pending { color: #ff9800; font-style: italic; font-size: 0.8rem; }
 
         .p2p-controls { display: flex; flex-direction: column; gap: 10px; }
         .p2p-row { display: flex; gap: 10px; align-items: stretch; }
@@ -109,9 +107,11 @@
         .btn-send:disabled { background: #555; cursor: not-allowed; }
         .btn-call { background: #2196F3; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; font-size: 1rem; }
 
-        /* Crypto y Llamada */
+        /* Crypto */
         .crypto-field { background: #2a1b15; border: 1px solid #ffb300; color: #ffb300; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 5px; font-family: monospace; font-size: 1rem; }
         .crypto-label { font-size: 0.8rem; color: #ffb300; margin-bottom: 2px; display: block; }
+
+        /* Incoming Modal */
         #incoming-modal .modal-content { padding: 30px; text-align: center; background: var(--wood-light); }
         #incoming-modal h2 { color: var(--flower-pink); margin-top: 0; }
         #incoming-modal .caller-id { background: #000; color: #0f0; padding: 10px; border-radius: 5px; font-family: monospace; margin: 15px 0; word-break: break-all; border: 1px solid var(--leaf-green); }
@@ -176,7 +176,6 @@
             <div id="tab-contacts" class="sidebar-content" style="display: none;">
                 <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px; margin-top:0;">👥 Agenda P2P</h3>
                 <p style="font-size:0.8rem; color:#aaa; margin-bottom:15px;">Guarda los IDs de tus amigos con nombres fáciles de recordar.</p>
-
                 <div class="form-group">
                     <label>Nombre del Contacto</label>
                     <input type="text" id="contact-name" placeholder="Ej: Juan Pérez">
@@ -186,7 +185,6 @@
                     <input type="text" id="contact-id" placeholder="Pega el ID aquí...">
                 </div>
                 <button class="btn-action" onclick="addContact()">➕ Agregar a Agenda</button>
-
                 <hr style="border:0; border-top:1px dashed #5d4037; margin:20px 0;">
                 <ul id="contact-list" class="contact-list"></ul>
             </div>
@@ -223,18 +221,15 @@
                     </div>
                     <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes P2P</button>
                 </header>
-
                 <nav class="nav-branches">
                     <button class="nav-btn active" onclick="switchFeedTab('my-posts')">Mis Hojas</button>
                     <button class="nav-btn" onclick="switchFeedTab('branches')">Ramas (RSS/Mastodon)</button>
                 </nav>
-
                 <div id="feed-container">
                     <div class="loading-frog">🌱 Cargando...</div>
                 </div>
             </div>
         </main>
-
     </div>
 
     <!-- MODAL CHAT P2P -->
@@ -247,13 +242,12 @@
             <div id="status-icon" class="phone-icon phone-grey">📱</div>
             <div id="status-text" style="margin-top:5px; font-weight:bold;">Desconectado</div>
         </div>
-
         <div class="p2p-body">
             <div id="p2p-log" class="p2p-log">Iniciando...</div>
             
-            <!-- Cifrado Transparente -->
+            <!-- Cifrado -->
             <div style="margin-bottom: 10px;">
-                <label class="crypto-label">🔑 Contraseña (Opcional - Cifra si se escribe):</label>
+                <label class="crypto-label">🔑 Contraseña (Opcional):</label>
                 <input type="password" id="crypto-password" class="crypto-field" placeholder="Deja vacío para texto plano">
             </div>
 
@@ -277,7 +271,7 @@
                     <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Conectar</button>
                 </div>
                 <div class="p2p-row">
-                    <textarea id="msg-input" placeholder="Escribe tu mensaje aquí..." disabled></textarea>
+                    <textarea id="msg-input" placeholder="Escribe tu mensaje aquí... (Se envía al conectar o enviar)" disabled></textarea>
                     <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
                 </div>
             </div>
@@ -298,7 +292,7 @@
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN P2P (Igual a la funcional) ---
+        // --- CONFIGURACIÓN ---
         const P2P_CONFIG = {
             iceServers: [
                 { url: 'stun:stun.l.google.com:19302' },
@@ -312,22 +306,24 @@
 
         // --- VARIABLES GLOBALES ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
-        const PEER_ID_KEY = 'arbolapp_peer_id_v4'; // ID Persistente
+        const PEER_ID_KEY = 'arbolapp_peer_id_v5';
         const CONTACTS_KEY = 'arbolapp_contacts';
+        const PENDING_MSGS_KEY = 'arbolapp_pending_msgs'; // Clave para cola de pendientes
+        const CHAT_HISTORY_KEY = 'arbolapp_chat_history_'; // Prefijo para historial
         const ENC_SALT = "arbolapp-static-salt-v1";
         
         let peer = null, conn = null, myId = null;
         let pendingConnection = null; 
         let connectionTimeout = null;
         let contacts = [];
+        let pendingOutboundMessage = null; // Mensaje que se envía justo al conectar
 
-        // --- CRIPTOGRAFÍA (Capa transparente) ---
+        // --- CRIPTOGRAFÍA ---
         async function getCryptoKey(password) {
             const enc = new TextEncoder();
             const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
             return window.crypto.subtle.deriveKey({ name: "PBKDF2", salt: enc.encode(ENC_SALT), iterations: 100000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
         }
-
         async function encryptMessage(text, password) {
             if (!password) return null;
             try {
@@ -338,7 +334,6 @@
                 return { iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))), encrypted: true };
             } catch(e) { console.error(e); return null; }
         }
-
         async function decryptMessage(encryptedObj, password) {
             try {
                 const key = await getCryptoKey(password);
@@ -348,24 +343,17 @@
                 return new TextDecoder().decode(decrypted);
             } catch (e) { throw new Error("Clave incorrecta"); }
         }
-
         function logP2P(message) {
             const logDiv = document.getElementById('p2p-log');
-            if(logDiv) { 
-                const time = new Date().toLocaleTimeString().split(' ')[0]; 
-                logDiv.innerHTML += `<div>[${time}] ${message}</div>`; 
-                logDiv.scrollTop = logDiv.scrollHeight; 
-            }
+            if(logDiv) { const time = new Date().toLocaleTimeString().split(' ')[0]; logDiv.innerHTML += `<div>[${time}] ${message}</div>`; logDiv.scrollTop = logDiv.scrollHeight; }
             console.log("[P2P]", message);
         }
 
-        // --- INICIO P2P (Con ID Persistente) ---
+        // --- INICIO P2P ---
         window.addEventListener('load', () => {
-            loadContacts(); // Cargar agenda
+            loadContacts();
             let savedId = localStorage.getItem(PEER_ID_KEY);
-            logP2P("Iniciando nodo P2P (ID Persistente: " + (savedId ? "Sí" : "No") + ")...");
-            
-            // Inicializar Peer
+            logP2P("Iniciando nodo (ID: " + (savedId ? "Persistente" : "Nuevo") + ")...");
             peer = new Peer(savedId, P2P_CONFIG);
 
             peer.on('open', (id) => { 
@@ -382,32 +370,28 @@
                     localStorage.removeItem(PEER_ID_KEY);
                     location.reload(); 
                 } else {
-                    console.error(err);
-                    logP2P("Error Peer: " + err.type);
-                    alert("Error de red P2P (" + err.type + ")");
+                    console.error(err); logP2P("Error: " + err.type);
+                    alert("Error P2P (" + err.type + ")");
                 }
             });
 
             peer.on('connection', (c) => {
-                logP2P("Llamada entrante de: " + c.peer);
+                logP2P("Llamada entrante: " + c.peer);
                 pendingConnection = c;
-                const modal = document.getElementById('incoming-modal');
                 document.getElementById('caller-id-display').innerText = c.peer;
-                modal.showModal();
+                document.getElementById('incoming-modal').showModal();
             });
-            
             peer.on('disconnected', () => {
                 logP2P("Desconectado del servidor. Reintentando...");
                 if(peer && !peer.destroyed) peer.reconnect();
             });
         });
 
-        // --- AGENDA DE CONTACTOS ---
+        // --- AGENDA ---
         function loadContacts() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContacts();
         }
-
         function renderContacts() {
             const list = document.getElementById('contact-list');
             list.innerHTML = '';
@@ -425,7 +409,6 @@
                 list.appendChild(li);
             });
         }
-
         function addContact() {
             const name = document.getElementById('contact-name').value.trim();
             const id = document.getElementById('contact-id').value.trim();
@@ -435,7 +418,6 @@
             document.getElementById('contact-name').value = ''; document.getElementById('contact-id').value = '';
             renderContacts();
         }
-
         function deleteContact(index) {
             if(confirm("¿Borrar contacto?")) {
                 contacts.splice(index, 1);
@@ -443,31 +425,38 @@
                 renderContacts();
             }
         }
-
         function selectContact(id) {
             document.getElementById('remote-peer-id').value = id;
             openP2P();
             document.getElementById('msg-input').focus();
         }
 
-        // --- LÓGICA DE CONEXIÓN (Restaurada del código funcional) ---
+        // --- LÓGICA DE CONEXIÓN HÍBRIDA ---
         function connectToPeer() {
             const remoteId = document.getElementById('remote-peer-id').value.trim();
             if (!remoteId) return alert("Ingresa ID remoto");
-            if(conn && conn.open) conn.close();
-
-            setPhoneStatus('calling');
-            logP2P("Intentando conectar a: " + remoteId);
             
-            // CLAVE: USAR reliable: true como en la versión que funcionaba
+            // 1. CHECK CRÍTICO: Si hay texto en el input, lo guardamos como "Mensaje Inicial"
+            const msgInput = document.getElementById('msg-input');
+            const txt = msgInput.value.trim();
+            if (txt) {
+                pendingOutboundMessage = txt;
+                msgInput.value = ''; // Limpiar input para no duplicar
+                addSystemMessage("Mensaje preparado. Se enviará al conectar...");
+            }
+
+            if(conn && conn.open) conn.close();
+            setPhoneStatus('calling');
+            logP2P("Conectando a: " + remoteId);
+
+            // Conectar con reliable: true
             conn = peer.connect(remoteId, { reliable: true });
 
-            // Timeout de 15 segundos (igual que la funcional)
             connectionTimeout = setTimeout(() => {
                 if (!conn.open) {
-                    logP2P("Timeout. Revisa Firewall/Red.");
+                    logP2P("Timeout. Revisa red.");
                     setPhoneStatus('idle');
-                    alert("Tiempo de espera agotado. Asegúrate de que ambos tengan la página abierta.");
+                    alert("Tiempo agotado. Asegúrate de que ambos tengan la página abierta.");
                     if(conn) conn.close();
                 }
             }, 15000);
@@ -477,11 +466,25 @@
                 logP2P("Conexión establecida.");
                 setPhoneStatus('connected'); 
                 enableChat(true); 
+                
+                // Cargar historial previo
+                loadChatHistory(remoteId);
                 addSystemMessage("Conectado.");
+
+                // 2. ENVIAR MENSAJE INMEDIATO (La petición del usuario)
+                if (pendingOutboundMessage) {
+                    // Procesar envío inmediato (cifrado o plano)
+                    processAndSend(pendingOutboundMessage);
+                    // Mostrar en chat local
+                    addMessage(pendingOutboundMessage, 'sent');
+                    pendingOutboundMessage = null;
+                }
+
+                // 3. ENVIAR MENSAJES PENDIENTES (Cola)
+                flushPendingMessages(remoteId);
             });
 
             conn.on('data', handleIncomingData);
-
             conn.on('close', () => {
                 logP2P("Conexión cerrada.");
                 setPhoneStatus('idle'); 
@@ -489,95 +492,166 @@
                 conn = null; 
                 addSystemMessage("Desconectado.");
             });
-
             conn.on('error', (err) => {
-                logP2P("Error en conexión: " + err.type);
+                logP2P("Error: " + err.type);
                 setPhoneStatus('idle');
                 alert("Error de conexión: " + err.type);
             });
         }
 
-        function handleConnection(connection) {
-            conn = connection;
-            connection.on('open', () => {
-                logP2P("Llamada aceptada exitosamente.");
+        // --- MANEJO DE LLAMADAS ENTRANTES ---
+        function acceptIncomingCall() {
+            if (!pendingConnection) return;
+            document.getElementById('incoming-modal').close();
+            logP2P("Aceptando conexión...");
+            
+            conn = pendingConnection;
+            pendingConnection = null;
+
+            if (!document.getElementById('p2p-modal').open()) openP2P();
+
+            // Usar .open() explícito
+            conn.on('open', () => {
+                logP2P("Conexión entrante abierta.");
                 setPhoneStatus('connected'); 
                 enableChat(true); 
+                
+                const peerId = conn.peer;
+                loadChatHistory(peerId);
                 addSystemMessage("Conectado.");
+                
+                // Enviar pendientes para este peer si los hay
+                flushPendingMessages(peerId);
             });
-            connection.on('data', handleIncomingData);
-            connection.on('close', () => {
+            
+            conn.on('data', handleIncomingData);
+            conn.on('close', () => {
                 logP2P("El otro usuario se ha ido.");
                 setPhoneStatus('idle'); 
                 enableChat(false); 
                 conn = null; 
             });
-            connection.on('error', (err) => logP2P("Error en sesión: " + err));
+            conn.on('error', (err) => logP2P("Error sesión: " + err));
         }
-
-        // --- GESTIÓN DE LLAMADAS ---
-        function acceptIncomingCall() {
-            if (!pendingConnection) return;
-            document.getElementById('incoming-modal').close();
-            logP2P("Conexión aceptada.");
-            conn = pendingConnection;
-            pendingConnection = null;
-            if (!document.getElementById('p2p-modal').open) openP2P();
-            handleConnection(conn);
-        }
-
         function rejectIncomingCall() {
             if (!pendingConnection) return;
             document.getElementById('incoming-modal').close();
-            logP2P("Conexión rechazada.");
+            logP2P("Rechazado.");
             pendingConnection.close();
             pendingConnection = null;
         }
 
-        // --- MANEJO DE DATOS (Cifrado Transparente) ---
+        // --- SISTEMA DE MENSAJES PENDIENTES ---
+        function getPendingQueue() {
+            return JSON.parse(localStorage.getItem(PENDING_MSGS_KEY) || '{}');
+        }
+        function savePendingQueue(queue) {
+            localStorage.setItem(PENDING_MSGS_KEY, JSON.stringify(queue));
+        }
+
+        function flushPendingMessages(remoteId) {
+            const queue = getPendingQueue();
+            if (queue[remoteId] && queue[remoteId].length > 0) {
+                addSystemMessage(`Enviando ${queue[remoteId].length} mensajes pendientes...`);
+                queue[remoteId].forEach(msg => {
+                    // Reenviar usando el proceso estándar
+                    processAndSend(msg);
+                    addMessage(msg, 'sent'); // Volver a mostrar como enviado en UI
+                });
+                delete queue[remoteId];
+                savePendingQueue(queue);
+            }
+        }
+
+        // --- MENSAJERÍA ---
         async function handleIncomingData(data) {
+            const peerId = conn.peer;
             const password = document.getElementById('crypto-password').value;
-            
+            let finalText = "";
+
+            // Descifrado si es necesario
             if (data && typeof data === 'object' && data.encrypted) {
                 if (!password) { 
-                    addMessage("🔒 Mensaje cifrado. Ingresa clave para leer.", 'locked'); 
+                    addMessage("🔒 Mensaje cifrado.", 'locked'); 
                     return; 
                 }
                 try { 
-                    const d = await decryptMessage(data, password); 
-                    addMessage(d, 'received'); 
+                    finalText = await decryptMessage(data, password); 
                 } catch (e) { 
-                    addMessage("🚫 Error descifrando (¿Clave incorrecta?)", 'error'); 
+                    addMessage("🚫 Error descifrando.", 'error'); 
+                    return;
                 }
             } else { 
-                addMessage(data, 'received'); 
+                finalText = data; 
             }
+
+            addMessage(finalText, 'received');
+            // Guardar en historial
+            saveMessageToHistory(peerId, finalText, 'received');
         }
 
         async function sendMessage() {
             const input = document.getElementById('msg-input');
             const txt = input.value.trim();
-            if (!txt || !conn || !conn.open) return;
-            
-            const password = document.getElementById('crypto-password').value;
-            let payload = txt;
-            
-            // Si hay clave, ciframos. Si no, enviamos texto plano. Simple.
-            if (password) {
-                const encrypted = await encryptMessage(txt, password); 
-                if(encrypted) {
-                    payload = encrypted; 
-                    addMessage(txt, 'sent'); 
-                } else {
-                    alert("Error cifrando mensaje.");
-                    return;
-                }
-            } else { 
-                addMessage(txt, 'sent'); 
+            if (!txt) return;
+
+            const remoteId = document.getElementById('remote-peer-id').value.trim();
+            if(!remoteId) return alert("Selecciona un contacto o ingresa ID.");
+
+            // Si estamos conectados con esa persona
+            if (conn && conn.open && conn.peer === remoteId) {
+                processAndSend(txt);
+                addMessage(txt, 'sent');
+                input.value = '';
+            } else {
+                // Si no, guardar como pendiente
+                savePendingMessage(remoteId, txt);
+                addMessage(txt, 'sent'); // Se muestra como enviado visualmente, pero se marca
+                addSystemMessage("(Guardado como pendiente. Se enviará al conectar.)");
+                addMessage(txt, 'pending'); // Marca visual
+                input.value = '';
             }
-            
-            conn.send(payload); 
-            input.value = '';
+        }
+
+        // Función central para enviar (Cifra si hay pass, o plano)
+        async function processAndSend(text) {
+            const password = document.getElementById('crypto-password').value;
+            let payload = text;
+            if (password) {
+                const encrypted = await encryptMessage(text, password); 
+                if(encrypted) payload = encrypted;
+            }
+            if(conn && conn.open) conn.send(payload);
+        }
+
+        function savePendingMessage(destId, text) {
+            const queue = getPendingQueue();
+            if (!queue[destId]) queue[destId] = [];
+            queue[destId].push(text);
+            savePendingQueue(queue);
+        }
+
+        // --- HISTORIAL DE CHAT (Persistente en el navegador) ---
+        function saveMessageToHistory(peerId, text, type) {
+            const key = CHAT_HISTORY_KEY + peerId;
+            const history = JSON.parse(localStorage.getItem(key) || '[]');
+            history.push({ text, type, date: Date.now() });
+            localStorage.setItem(key, JSON.stringify(history));
+        }
+
+        function loadChatHistory(peerId) {
+            const w = document.getElementById('chat-window');
+            w.innerHTML = ''; // Limpiar
+            const key = CHAT_HISTORY_KEY + peerId;
+            const history = JSON.parse(localStorage.getItem(key) || '[]');
+            history.forEach(h => {
+                const d = document.createElement('div');
+                d.className = `message msg-${h.type}`; 
+                d.style.whiteSpace = 'pre-wrap';
+                d.innerText = h.text; 
+                w.appendChild(d);
+            });
+            w.scrollTop = w.scrollHeight;
         }
 
         // --- INTERFAZ ---
@@ -752,11 +826,7 @@
             }
             let contentHtml = '';
             if (isOwn) {
-                contentHtml = post.content.replace(/&/g, "&amp;")
-                                         .replace(/</g, "&lt;")
-                                         .replace(/>/g, "&gt;")
-                                         .replace(/"/g, "&quot;")
-                                         .replace(/'/g, "&#039;");
+                contentHtml = post.content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
             } else {
                 contentHtml = post.content;
             }
