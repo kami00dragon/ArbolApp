@@ -5,20 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
     
-    <!-- Librería PeerJS (Conexión Directa) - Usando CDN de jsDelivr como alternativa -->
+    <!-- Librería PeerJS (Conexión Directa) -->
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- Librería GunDB (Fallback / Mensajería tipo SMS) -->
+    <!-- Librería GunDB (Fallback) -->
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     
     <style>
-        /* --- ESTILOS COMPLETOS (sin cambios) --- */
+        /* (mismos estilos, sin cambios) */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
             --border-stem: #1b5e20; --sidebar-width: 340px;
-            --msg-p2p-bg: #2e7d32; /* Verde para directo */
-            --msg-relay-bg: #f57c00; /* Naranja para fallback */
+            --msg-p2p-bg: #2e7d32; --msg-relay-bg: #f57c00;
         }
         body { margin: 0; padding: 0; font-family: 'Georgia', serif; background-color: var(--wood-dark); background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px); color: var(--text-parchment); height: 100vh; overflow: hidden; }
         .app-layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; height: 100vh; max-width: 1600px; margin: 0 auto; background-color: rgba(0,0,0,0.2); position: relative; z-index: 10; }
@@ -90,7 +89,7 @@
         .phone-blue { color: #2196F3; animation: ringing 1.5s infinite ease-in-out; }
         .phone-green { color: #4CAF50; }
         .phone-grey { color: #795548; }
-        .phone-orange { color: #FF9800; /* Modo SMS/Relay */ }
+        .phone-orange { color: #FF9800; }
         @keyframes ringing { 0% { transform: rotate(0deg); } 10% { transform: rotate(-15deg); } 20% { transform: rotate(15deg); } 30% { transform: rotate(-15deg); } 40% { transform: rotate(15deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
         
         .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 550px; }
@@ -101,10 +100,9 @@
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; border: 1px solid #1b5e20; }
         .msg-received { background: #555; color: white; align-self: flex-start; border: 1px solid #777; }
         
-        /* Indicador de tipo de mensaje */
         .msg-tag { font-size: 0.65rem; opacity: 0.8; margin-bottom: 2px; display: block; text-transform: uppercase; font-weight: bold; }
-        .tag-p2p { color: #a5d6a7; } /* Verde claro */
-        .tag-relay { color: #ffe0b2; } /* Naranja claro */
+        .tag-p2p { color: #a5d6a7; }
+        .tag-relay { color: #ffe0b2; }
         
         .msg-error { background: #511; color: #ffcccc; border: 1px solid #f00; font-size: 0.8rem; }
         .msg-locked { background: #443300; color: #ffecb3; border: 1px solid #ffb300; font-style: italic; }
@@ -226,7 +224,7 @@
                     <h4 style="margin:0 0 10px 0; color:#ffcc80;">🔄 Resetear Local</h4>
                     <button class="btn-secondary" onclick="clearLocalData()">Borrar borradores locales</button>
                 </div>
-                <!-- NUEVO BOTÓN: Reiniciar ID de Peer -->
+                <!-- Botón para reiniciar ID de Peer (mejorado) -->
                 <div style="margin-top: 20px;">
                     <h4 style="margin:0 0 10px 0; color:#ffcc80;">🔁 Reiniciar ID Peer</h4>
                     <button class="btn-secondary" onclick="resetPeerId()">Forzar nuevo ID P2P</button>
@@ -292,7 +290,6 @@
 
             <div class="p2p-controls">
                 <div class="p2p-row">
-                    <!-- Botón Conectar es ahora secundario, Enviar hace todo -->
                     <button class="btn-call" id="btn-force-connect" onclick="p2pManager.forceConnect()">🔄 Forzar Conexión Directa</button>
                 </div>
                 <div class="p2p-row">
@@ -317,15 +314,12 @@
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN P2P MEJORADA (servidor alternativo y STUN reducido) ---
-        const P2P_CONFIG = {
-            // Usamos un servidor público alternativo (peerjs-server.herokuapp.com)
-            // Si este servidor falla, se puede cambiar a peerjs.com o usar el propio.
+        // --- CONFIGURACIÓN P2P MEJORADA (con fallback al servidor por defecto) ---
+        const P2P_CONFIG_PRIMARY = {
             host: 'peerjs-server.herokuapp.com',
             port: 443,
             path: '/peerjs',
             secure: true,
-            // Servidores STUN reducidos a los de Google (más estables)
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' }
@@ -333,18 +327,27 @@
             debug: 2
         };
 
-        // --- VARIABLES GLOBALES Y SETUP ---
+        const P2P_CONFIG_FALLBACK = {
+            // Usar configuración por defecto de PeerJS (servidor peerjs.com)
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ],
+            debug: 2
+        };
+
+        // --- VARIABLES GLOBALES ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         const PEER_ID_KEY = 'arbolapp_peer_id_v9';
         const CONTACTS_KEY = 'arbolapp_contacts';
         const CHAT_HISTORY_KEY = 'arbolapp_chat_history_'; 
         const ENC_SALT = "arbolapp-static-salt-v2";
         
-        let p2pManager; // Se inicializará después de que el DOM esté listo
+        let p2pManager;
         let pendingConnection = null; 
         let contacts = [];
 
-        // --- GESTOR P2P HÍBRIDO (PeerJS + GunDB) ---
+        // --- GESTOR P2P HÍBRIDO (con reconexión y manejo de errores) ---
         class P2PManager {
             constructor() {
                 this.peer = null;
@@ -359,38 +362,53 @@
                 
                 this.remoteId = null;
                 this.isConnected = false;
-                this.connectionType = 'none'; // 'p2p' or 'relay'
+                this.connectionType = 'none';
+                this.usingFallback = false;
                 
-                // Callbacks UI
+                // Callbacks
                 this.onLog = (msg) => logP2P(msg);
                 this.onStatusChange = (status, type) => setPhoneStatus(status, type);
                 this.onMessage = (msg, type) => addMessage(msg, type);
                 this.onSystemMsg = (msg) => addSystemMessage(msg);
 
-                this.initPeerJS();
+                this.initPeerJS(P2P_CONFIG_PRIMARY);
             }
 
-            initPeerJS() {
+            initPeerJS(config) {
                 let savedId = localStorage.getItem(PEER_ID_KEY);
-                this.peer = new Peer(savedId, P2P_CONFIG);
+                try {
+                    this.peer = new Peer(savedId, config);
+                } catch (e) {
+                    this.onLog("Error al crear Peer: " + e.message);
+                    return;
+                }
 
                 this.peer.on('open', (id) => { 
                     this.myId = id;
                     localStorage.setItem(PEER_ID_KEY, id);
                     this.onLog("Nodo P2P listo. ID: " + id);
-                    // Verificar que el elemento exista antes de asignar
-                    const myIdField = document.getElementById('my-peer-id');
-                    if (myIdField) myIdField.value = this.myId;
+                    this.updateMyIdField();
                     this.onStatusChange('idle', 'p2p');
                 });
 
                 this.peer.on('error', (err) => {
                     if(err.type === 'unavailable-id') {
                         localStorage.removeItem(PEER_ID_KEY);
-                        location.reload(); 
+                        this.onLog("ID no disponible, se generará uno nuevo al recargar.");
+                        location.reload();
                     } else if(err.type === 'peer-unavailable') {
                         this.onLog("Peer no encontrado directo. Pasando a modo Relay...");
                         this.switchToRelayMode();
+                    } else if (err.type === 'server-error' || err.type === 'network') {
+                        this.onLog("Error de conexión con el servidor PeerJS: " + err.type);
+                        if (!this.usingFallback) {
+                            this.onLog("Intentando con servidor por defecto...");
+                            this.usingFallback = true;
+                            this.peer.destroy();
+                            this.initPeerJS(P2P_CONFIG_FALLBACK);
+                        } else {
+                            this.onLog("No se pudo conectar a ningún servidor PeerJS. Solo modo Relay.");
+                        }
                     } else {
                         console.error(err);
                         this.onLog("Error P2P: " + err.type);
@@ -410,26 +428,26 @@
                 });
             }
 
-            // Lógica principal de envío híbrido
+            updateMyIdField() {
+                const myIdField = document.getElementById('my-peer-id');
+                if (myIdField && this.myId) {
+                    myIdField.value = this.myId;
+                }
+            }
+
             async sendMessage(text) {
                 const remoteId = document.getElementById('remote-peer-id').value.trim();
                 if(!remoteId) return alert("Ingresa ID remoto.");
-
                 this.remoteId = remoteId;
 
-                // 1. Si ya tenemos conexión P2P abierta, usarla
                 if (this.conn && this.conn.open) {
                     this.sendPeerJS(text);
-                } 
-                // 2. Si no, intentar conectar primero (La "Llamada")
-                else {
+                } else {
                     this.onLog("Iniciando conexión para enviar...");
                     const connected = await this.attemptConnection(remoteId);
-                    
                     if (connected) {
                         this.sendPeerJS(text);
                     } else {
-                        // 3. Fallback a GunDB (SMS)
                         this.onLog("Conexión directa falló. Usando Red Relay (GunDB).");
                         this.switchToRelayMode();
                         this.sendGunDB(text);
@@ -441,8 +459,6 @@
                 return new Promise((resolve) => {
                     this.conn = this.peer.connect(remoteId, { reliable: true });
                     let resolved = false;
-
-                    // Aumentamos timeout a 15 segundos
                     const timeout = setTimeout(() => {
                         if(!resolved) {
                             resolved = true;
@@ -450,7 +466,7 @@
                             if(this.conn) this.conn.close();
                             resolve(false);
                         }
-                    }, 15000); // 15 segundos
+                    }, 15000);
 
                     this.conn.on('open', () => {
                         if(!resolved) {
@@ -495,8 +511,6 @@
                 });
             }
 
-            // --- ENVÍO DE DATOS ---
-
             async sendPeerJS(text) {
                 const password = document.getElementById('crypto-password').value;
                 let payload = text;
@@ -512,7 +526,6 @@
             }
 
             sendGunDB(text) {
-                // Generar un ID de sala ordenado para evitar duplicados
                 const participants = [this.myId, this.remoteId].sort();
                 const roomId = participants.join('_');
                 const channel = this.gun.get('arbolapp_chat').get(roomId);
@@ -523,20 +536,15 @@
                     timestamp: Date.now(),
                     type: 'relay' 
                 };
-
                 channel.set(msgData);
                 this.onMessage(text, 'sent-relay');
                 saveMessageToHistory(this.remoteId, text, 'sent');
             }
 
-            // --- RECEPCIÓN DE DATOS ---
-            
             handleIncomingData(data) {
-                // Duplicados
                 if (this.lastReceivedData === JSON.stringify(data)) return;
                 this.lastReceivedData = JSON.stringify(data);
 
-                let finalText = "";
                 const password = document.getElementById('crypto-password').value;
 
                 if (data && typeof data === 'object' && data.encrypted) {
@@ -546,9 +554,8 @@
                         saveMessageToHistory(this.conn.peer, txt, 'received');
                     }).catch(() => this.onMessage("Error clave", 'error'));
                 } else {
-                    finalText = data;
-                    this.onMessage(finalText, 'received-p2p');
-                    saveMessageToHistory(this.conn.peer, finalText, 'received');
+                    this.onMessage(data, 'received-p2p');
+                    saveMessageToHistory(this.conn.peer, data, 'received');
                 }
             }
 
@@ -557,17 +564,11 @@
                 const participants = [this.myId, this.remoteId].sort();
                 const roomId = participants.join('_');
                 const channel = this.gun.get('arbolapp_chat').get(roomId);
-
-                // Escuchar nuevos mensajes
                 channel.map().on((data, key) => {
                     if (!data) return;
-                    // Filtramos nuestros propios mensajes enviados por relay para no duplicar
                     if (data.sender === this.myId) return;
-
-                    // Simple dedup check por timestamp
                     if (this.lastGunTS === data.timestamp) return;
                     this.lastGunTS = data.timestamp;
-
                     this.onMessage(data.text, 'received-relay');
                     saveMessageToHistory(this.remoteId, data.text, 'received');
                 });
@@ -575,13 +576,13 @@
 
             switchToRelayMode() {
                 this.connectionType = 'relay';
-                this.onStatusChange('connected', 'relay'); // Estado naranja
+                this.onStatusChange('connected', 'relay');
                 this.startListeningGunDB();
                 this.onSystemMsg("Modo SMS/Relay activado. Mensajes vía red descentralizada.");
             }
         }
 
-        // --- CRIPTOGRAFÍA ---
+        // --- CRIPTOGRAFÍA (sin cambios) ---
         async function getCryptoKey(password) {
             const enc = new TextEncoder();
             const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
@@ -618,14 +619,8 @@
             const input = document.getElementById('msg-input');
             const txt = input.value.trim();
             if(!txt) return;
-
-            // Limpiar input inmediatamente para sensación de rapidez
             input.value = '';
-            
-            // Mostrar pendiente visualmente
             addMessage(txt, 'pending');
-
-            // Delegar al manager
             p2pManager.sendMessage(txt);
         }
 
@@ -644,16 +639,12 @@
             const t = document.getElementById('status-text');
             const m = document.getElementById('connection-method-text');
             if(!i) return;
-
-            // Reset classes
             i.className = 'phone-icon';
-
             if (type === 'relay') {
                 i.classList.add('phone-orange');
                 m.innerText = "Red Relay (GunDB)";
                 if(status === 'connected') { t.innerText = "En línea (Relay)"; }
             } else {
-                // P2P Mode
                 if(status==='idle') { i.classList.add('phone-grey'); t.innerText="Desconectado"; m.innerText="Esperando conexión P2P"; }
                 else if(status==='calling') { i.classList.add('phone-blue'); t.innerText="Conectando..."; m.innerText="Buscando ruta directa"; }
                 else if(status==='connected') { i.classList.add('phone-green'); t.innerText="En línea (Directo)"; m.innerText="Conexión P2P Segura"; }
@@ -663,8 +654,6 @@
         function addMessage(txt, type) {
             const w = document.getElementById('chat-window');
             const d = document.createElement('div');
-            
-            // Clases base
             let cssClass = 'message';
             let tagHtml = '';
 
@@ -680,23 +669,17 @@
                 tagHtml = `<span class="msg-tag tag-p2p">🔒 Directo</span>`;
             } else if (type === 'received-relay') {
                 cssClass += ' msg-received';
-                d.style.background = '#444'; // Un poco más oscuro para recibido relay
+                d.style.background = '#444';
                 tagHtml = `<span class="msg-tag tag-relay">📡 SMS Relay</span>`;
             } else if (type === 'pending') {
                 cssClass += ' msg-pending';
                 d.innerText = "⏳ " + txt;
-                d.id = 'pending-' + Date.now(); // ID temporal para reemplazar
+                d.id = 'pending-' + Date.now();
                 w.appendChild(d); w.scrollTop = w.scrollHeight;
-                return; // Retornamos early porque pendiente es temporal
-            } else if (type === 'sent') {
-                 // Fallback visual genérico
-                 cssClass += ' msg-sent';
-            } else if (type === 'received') {
-                 cssClass += ' msg-received';
+                return;
             } else {
                  cssClass += ' msg-' + type;
             }
-
             d.className = cssClass;
             d.style.whiteSpace = 'pre-wrap';
             d.innerHTML = `${tagHtml}${txt}`; 
@@ -712,13 +695,17 @@
         }
 
         function openP2P() { 
-            document.getElementById('p2p-modal').showModal(); 
+            const modal = document.getElementById('p2p-modal');
+            if (!modal.open) modal.showModal();
             const input = document.getElementById('msg-input');
             input.disabled = false;
             document.getElementById('btn-send').disabled = false;
             input.placeholder = "Escribe y Enter. Se conecta solo.";
             input.focus();
-            // Cargar historial si hay ID remoto
+            // Actualizar campo de ID por si no se había actualizado antes
+            if (p2pManager) {
+                p2pManager.updateMyIdField();
+            }
             const remoteId = document.getElementById('remote-peer-id').value.trim();
             if(remoteId) loadChatHistory(remoteId);
         }
@@ -750,7 +737,6 @@
                 p2pManager.onStatusChange('idle', 'p2p');
                 addSystemMessage("El otro usuario se ha ido.");
             });
-            // ❌ ELIMINADA LA LÍNEA: p2pManager.conn.open();
         }
 
         function rejectIncomingCall() {
@@ -761,7 +747,7 @@
             pendingConnection = null;
         }
 
-        // --- AGENDA ---
+        // --- AGENDA (sin cambios) ---
         function loadContacts() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContacts();
@@ -821,9 +807,8 @@
             const history = JSON.parse(localStorage.getItem(key) || '[]');
             history.forEach(h => {
                 let displayType = h.type; 
-                if (displayType === 'sent') displayType = 'sent-p2p'; // Asunción por compatibilidad
+                if (displayType === 'sent') displayType = 'sent-p2p';
                 if (displayType === 'received') displayType = 'received-p2p';
-                
                 addMessage(h.text, displayType);
             });
             w.scrollTop = w.scrollHeight;
@@ -862,7 +847,7 @@
 
         function clearLocalData() { if(confirm("¿Borrar locales?")) { localStorage.removeItem(LOCAL_STORAGE_KEY); loadMyPosts(); } }
 
-        // NUEVA FUNCIÓN: Reiniciar ID de Peer
+        // Función mejorada para reiniciar ID de Peer
         function resetPeerId() {
             if (confirm("¿Forzar nuevo ID P2P? Se borrará el actual y se recargará la página.")) {
                 localStorage.removeItem(PEER_ID_KEY);
@@ -1023,9 +1008,8 @@
             alert("Archivo rss.xml generado. Súbelo a tu repositorio para actualizar el feed.");
         }
 
-        // Inicialización al cargar la página
+        // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
-            // Inicializar el gestor P2P después de que el DOM esté listo
             p2pManager = new P2PManager();
             loadMyPosts();
             loadContacts();
