@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre (E2E)</title>
-    <!-- 1. Librería PeerJS (Versión estable) -->
+    <!-- 1. Librería PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <!-- 2. ENLAZE AL RSS PARA MASTODON -->
@@ -126,8 +126,8 @@
         .post-content { 
             line-height: 1.6; 
             font-size: 1rem;
-            white-space: pre-wrap; /* Mantiene los saltos de línea del texto plano */
-            word-wrap: break-word;  /* Evita desbordamiento de palabras largas */
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         
         .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e27d3; background: #000; }
@@ -180,7 +180,7 @@
             0% { transform: rotate(0deg); } 10% { transform: rotate(-15deg); } 20% { transform: rotate(15deg); } 30% { transform: rotate(-15deg); } 40% { transform: rotate(15deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(0deg); }
         }
 
-        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 500px; }
+        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 550px; } /* Un poco más alto para acomodar el textarea grande */
         .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.75rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
         .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; }
@@ -191,20 +191,56 @@
         .msg-locked { background: #443300; color: #ffecb3; border: 1px solid #ffb300; font-style: italic; }
 
         .p2p-controls { display: flex; flex-direction: column; gap: 10px; }
-        .p2p-row { display: flex; gap: 10px; }
-        .btn-call { background: #2196F3; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; }
-        .btn-send { background: var(--flower-pink); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 0 0 50px; }
+        
+        /* --- NUEVO ESTILO PARA INPUT ANCHO --- */
+        .p2p-row { display: flex; gap: 10px; align-items: stretch; }
+        
+        /* El input de mensaje ahora es un textarea más grande */
+        #msg-input {
+            flex-grow: 1; /* Ocupa todo el ancho disponible */
+            background: #2a1b15;
+            border: 1px solid #795548;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: none; /* Fijar altura */
+            min-height: 50px;
+            font-size: 1rem;
+        }
+        #msg-input:focus { outline: 2px solid var(--leaf-green); }
+
+        /* El botón de enviar se ajusta a la altura */
+        .btn-send { 
+            background: var(--flower-pink); 
+            color: white; 
+            border: none; 
+            padding: 0 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 60px;
+        }
+        .btn-send:hover { background: #c2185b; }
+        .btn-send:disabled { background: #555; cursor: not-allowed; }
+
+        .btn-call { background: #2196F3; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; font-size: 1rem; }
 
         /* Campo de Contraseña */
         .crypto-field {
             background: #2a1b15;
             border: 1px solid #ffb300;
             color: #ffb300;
-            padding: 8px;
+            padding: 10px;
             border-radius: 4px;
             width: 100%;
             margin-bottom: 5px;
             font-family: monospace;
+            font-size: 1rem;
         }
         .crypto-label { font-size: 0.8rem; color: #ffb300; margin-bottom: 2px; display: block; }
 
@@ -340,7 +376,7 @@
         </div>
 
         <div class="p2p-body">
-            <div id="p2p-log" class="p2p-log">Sistema iniciado...</div>
+            <div id="p2p-log" class="p2p-log">Iniciando...</div>
             
             <!-- Campo de Clave -->
             <div style="margin-bottom: 10px;">
@@ -353,48 +389,43 @@
             <div style="margin-bottom: 10px;">
                 <label style="font-size:0.8rem; color:#aaa;">Tu ID:</label>
                 <div style="display:flex; gap:5px;">
-                    <input type="text" id="my-peer-id" readonly style="flex:1; background:#222; border:1px solid #555; color:#fff; padding:5px; font-family:monospace;">
-                    <button onclick="copyMyId()" style="cursor:pointer;">📋</button>
+                    <input type="text" id="my-peer-id" readonly style="flex:1; background:#222; border:1px solid #555; color:#fff; padding:8px; font-family:monospace;">
+                    <button onclick="copyMyId()" style="cursor:pointer; background:#555; color:white; border:none; border-radius:4px; padding:0 10px;">📋</button>
                 </div>
             </div>
 
             <div style="margin-bottom: 10px;">
                 <label style="font-size:0.8rem; color:#aaa;">Conectar con ID:</label>
-                <input type="text" id="remote-peer-id" placeholder="Pega el ID aquí...">
+                <input type="text" id="remote-peer-id" placeholder="Pega el ID remoto aquí..." style="width:100%; padding:8px; background:#222; border:1px solid #555; color:#fff; border-radius:4px; box-sizing:border-box;">
             </div>
 
             <div class="p2p-controls">
                 <div class="p2p-row">
                     <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Conectar</button>
                 </div>
+                
+                <!-- AREA DE ESCRITURA AGRANDADA -->
                 <div class="p2p-row">
-                    <input type="text" id="msg-input" placeholder="Mensaje secreto..." disabled>
-                    <button class="btn-send" id="btn-send" onclick="sendMessage()" disabled>➤</button>
+                    <textarea id="msg-input" placeholder="Escribe tu mensaje aquí..." disabled></textarea>
+                    <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
                 </div>
             </div>
         </div>
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN P2P ROBUSTA INTEGRADA ---
-        // Usamos múltiples servidores STUN para asegurar conexión tras NATs y Firewalls.
-        // Esto hace la comunicación más resistente a caídas de servidor.
+        // --- CONFIGURACIÓN P2P ROBUSTA ---
         const P2P_CONFIG = {
-            debug: 2, // 0=none, 1=errors, 2=warnings, 3=all
+            debug: 1, // Solo errores para consola
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
-                // Servidores STUN adicionales para mayor robustez
-                { urls: 'stun:stun.services.mozilla.com' }
+                { urls: 'stun:global.stun.twilio.com:3478' } // STUN adicional muy robusto
             ]
         };
 
         // --- GESTIÓN DE ESTADO Y DATOS ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
-        const INITIAL_DATA = [];
 
         // --- LÓGICA DE CRIPTOGRAFÍA (E2E) ---
         const ENC_SALT = "arbolapp-static-salt-v1";
@@ -407,11 +438,13 @@
 
         async function encryptMessage(text, password) {
             if (!password) return null;
-            const key = await getCryptoKey(password);
-            const iv = window.crypto.getRandomValues(new Uint8Array(12));
-            const encoded = new TextEncoder().encode(text);
-            const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-            return { iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))), encrypted: true };
+            try {
+                const key = await getCryptoKey(password);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encoded = new TextEncoder().encode(text);
+                const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+                return { iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))), encrypted: true };
+            } catch(e) { console.error(e); return null; }
         }
 
         async function decryptMessage(encryptedObj, password) {
@@ -421,12 +454,16 @@
                 const data = new Uint8Array(atob(encryptedObj.ciphertext).split("").map(c => c.charCodeAt(0)));
                 const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
                 return new TextDecoder().decode(decrypted);
-            } catch (e) { throw new Error("Clave incorrecta o datos corruptos"); }
+            } catch (e) { throw new Error("Clave incorrecta"); }
         }
 
         function logP2P(message) {
             const logDiv = document.getElementById('p2p-log');
-            if(logDiv) { const time = new Date().toLocaleTimeString().split(' ')[0]; logDiv.innerHTML += `<div>[${time}] ${message}</div>`; logDiv.scrollTop = logDiv.scrollHeight; }
+            if(logDiv) { 
+                const time = new Date().toLocaleTimeString().split(' ')[0]; 
+                logDiv.innerHTML += `<div>[${time}] ${message}</div>`; 
+                logDiv.scrollTop = logDiv.scrollHeight; 
+            }
         }
 
         // --- LÓGICA DE PUBLICACIÓN ---
@@ -465,8 +502,6 @@
         // --- SISTEMA DE RAMAS (RSS + MASTODON) ---
         const DEFAULT_SOURCES = [
     { name: 'Perfil (Noticias)', url: 'https://www.perfil.com/feed/' },
-    
-    // --- MIS SEGUIMIENTOS DE MASTODON (RSS DIRECTO) ---
     { name: 'Simon Willison (IA)', url: 'https://fedi.simonwillison.net/@simon.rss' },
     { name: 'The Verge (Tech)', url: 'https://mastodon.social/@theverge.rss' },
     { name: 'Hugging Face (IA)', url: 'https://huggingface.social/@huggingface.rss' },
@@ -552,18 +587,14 @@
                 media = m ? `<div class="media-container"><img src="${m[1]}"></div>` : `<div class="media-container"><img src="https://picsum.photos/seed/${post.title.replace(/\s/g,'')}/600/300" style="opacity:0.8"></div>`;
             }
             
-            // --- CAMBIO AQUÍ: Lógica para mostrar contenido completo ---
             let contentHtml = '';
             if (isOwn) {
-                // Para posts propios: Escapamos HTML por seguridad pero mostramos TODO el texto.
-                // Los saltos de línea se manejan con CSS (white-space: pre-wrap)
                 contentHtml = post.content.replace(/&/g, "&amp;")
                                          .replace(/</g, "&lt;")
                                          .replace(/>/g, "&gt;")
                                          .replace(/"/g, "&quot;")
                                          .replace(/'/g, "&#039;");
             } else {
-                // Para posts externos (RSS): Mostramos el HTML completo tal cual (formato original)
                 contentHtml = post.content;
             }
 
@@ -574,53 +605,97 @@
         }
         document.addEventListener('DOMContentLoaded', () => loadMyPosts());
 
-        // --- LÓGICA P2P CON CIFRADO (REPARADA Y ROBUSTA) ---
+        // --- LÓGICA P2P REESCRITA (OPTIMIZADA Y RÁPIDA) ---
         let peer = null, conn = null, myId = null;
 
+        // 1. Manejo unificado de mensajes recibidos
+        async function handleIncomingData(data) {
+            const password = document.getElementById('crypto-password').value;
+            if (data && typeof data === 'object' && data.encrypted) {
+                if (!password) { 
+                    addMessage("🔒 Mensaje cifrado. Ingresa clave.", 'locked'); 
+                    return; 
+                }
+                try { 
+                    const d = await decryptMessage(data, password); 
+                    addMessage(d, 'received'); 
+                } catch (e) { 
+                    addMessage("🚫 Error descifrando (¿Clave incorrecta?)", 'error'); 
+                }
+            } else { 
+                addMessage(data, 'received'); 
+            }
+        }
+
+        // 2. Inicialización optimizada
         window.addEventListener('load', () => {
-            logP2P("Iniciando PeerJS con configuración robusta...");
-            
-            // Inicializamos Peer con la configuración interna definida arriba
-            // No dependemos de archivos externos
+            logP2P("Iniciando nodo P2P...");
             peer = new Peer(null, P2P_CONFIG);
 
             peer.on('open', id => { 
                 myId = id; 
-                logP2P("Nodo ID asignado: " + myId);
+                logP2P("ID asignado: " + id);
                 if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; 
+                // Si el modal ya está abierto, actualizar estado
+                if(document.getElementById('p2p-modal').open) setPhoneStatus('idle');
             });
 
             peer.on('connection', c => {
-                logP2P("Conexión entrante detectada...");
-                handleConnection(c);
+                logP2P("Llamada entrante...");
+                conn = c;
+                setupConnectionListeners(conn);
             });
 
-            peer.on('error', e => { 
-                console.error(e);
-                logP2P("Error P2P: " + e.type); 
-                // En caso de error de servidor, intentar reconectar o avisar al usuario
-                if(e.type === 'peer-unavailable') {
-                    addSystemMessage("Usuario no encontrado o desconectado.");
+            peer.on('error', err => {
+                console.error(err);
+                logP2P("Error: " + err.type);
+                if(err.type === 'peer-unavailable') {
+                    alert("El usuario no existe o está desconectado.");
                     setPhoneStatus('idle');
-                } else if (e.type === 'network') {
-                    addSystemMessage("Error de red. Comprueba tu conexión.");
                 }
             });
             
             peer.on('disconnected', () => {
-                logP2P("Desconectado del servidor de señalización. Intentando reconexión...");
-                // Si solo perdimos conexión con el servidor de señales pero el data channel sigue abierto,
-                // podríamos seguir chateando. PeerJS intenta reconectar automáticamente.
+                logP2P("Desconectado del servidor. Reintentando...");
+                // Intento de reconexión automática simple
+                if(peer && !peer.destroyed) {
+                    peer.reconnect();
+                }
             });
         });
+
+        // 3. Configurar listeners de conexión una sola vez
+        function setupConnectionListeners(connection) {
+            connection.on('open', () => {
+                logP2P("Conexión abierta.");
+                setPhoneStatus('connected'); 
+                enableChat(true); 
+                addSystemMessage("Conectado.");
+            });
+
+            connection.on('data', handleIncomingData);
+
+            connection.on('close', () => {
+                logP2P("Conexión cerrada por el par.");
+                setPhoneStatus('idle'); 
+                enableChat(false); 
+                conn = null; 
+                addSystemMessage("Desconectado.");
+            });
+
+            connection.on('error', (err) => {
+                logP2P("Error en conexión: " + err.type);
+                addSystemMessage("Error de conexión.");
+            });
+        }
 
         function openP2P() { 
             document.getElementById('p2p-modal').showModal(); 
             if(myId) {
                 setPhoneStatus('idle');
-                logP2P("Sistema P2P listo. ID: " + myId);
+                logP2P("Listo para conectar.");
             } else {
-                logP2P("Obteniendo ID...");
+                logP2P("Esperando ID del servidor...");
             }
         }
         
@@ -631,105 +706,24 @@
         function copyMyId() { 
             const i = document.getElementById('my-peer-id'); 
             i.select(); 
-            document.execCommand('copy'); 
-            alert("ID copiado al portapapeles");
+            navigator.clipboard.writeText(i.value).then(() => alert("ID copiado")).catch(() => document.execCommand('copy'));
         }
 
-        async function connectToPeer() {
+        function connectToPeer() {
             const id = document.getElementById('remote-peer-id').value.trim();
             if(!id) return alert("Ingresa ID remoto");
             
-            // Prevenir múltiples conexiones
+            // Si ya hay conexión, cerrar antes
             if(conn && conn.open) {
-                if(!confirm("Ya estás conectado. ¿Desconectar y llamar a otro?")) return;
                 conn.close();
             }
 
             setPhoneStatus('calling');
-            logP2P("Llamando a " + id + "...");
+            logP2P("Conectando a " + id + "...");
             
-            conn = peer.connect(id, { reliable: true });
-            
-            conn.on('open', () => { 
-                logP2P("Conexión establecida.");
-                setPhoneStatus('connected'); 
-                enableChat(true); 
-                addSystemMessage("Conectado."); 
-            });
-            
-            conn.on('data', async (data) => {
-                const password = document.getElementById('crypto-password').value;
-                // Manejo seguro de datos
-                if (data && typeof data === 'object' && data.encrypted) {
-                    if (!password) { 
-                        addMessage("🔒 Mensaje cifrado. Ingresa la clave.", 'locked'); 
-                        return; 
-                    }
-                    try { 
-                        const decrypted = await decryptMessage(data, password); 
-                        addMessage(decrypted, 'received'); 
-                    } catch (e) { 
-                        console.error(e);
-                        addMessage("🚫 Error: No se pudo descifrar (¿Clave incorrecta?)", 'error'); 
-                    }
-                } else { 
-                    addMessage(data, 'received'); 
-                }
-            });
-
-            conn.on('close', () => { 
-                logP2P("Conexión cerrada.");
-                setPhoneStatus('idle'); 
-                enableChat(false); 
-                addSystemMessage("Desconectado."); 
-                conn = null; 
-            });
-
-            conn.on('error', err => {
-                logP2P("Error en conexión: " + err);
-                addSystemMessage("Error de conexión.");
-            });
-        }
-
-        function handleConnection(c) {
-            conn = c;
-            logP2P("Gestionando conexión entrante...");
-            
-            conn.on('open', () => { 
-                logP2P("Sesión iniciada.");
-                setPhoneStatus('connected'); 
-                enableChat(true); 
-                addSystemMessage("Conectado."); 
-            });
-
-            conn.on('data', async (data) => {
-                const password = document.getElementById('crypto-password').value;
-                if (data && typeof data === 'object' && data.encrypted) {
-                    if (!password) { 
-                        addMessage("🔒 Mensaje cifrado.", 'locked'); 
-                        return; 
-                    }
-                    try { 
-                        const d = await decryptMessage(data, password); 
-                        addMessage(d, 'received'); 
-                    } catch (e) { 
-                        addMessage("🚫 Error descifrando.", 'error'); 
-                    }
-                } else { 
-                    addMessage(data, 'received'); 
-                }
-            });
-
-            conn.on('close', () => { 
-                logP2P("El otro usuario se ha ido.");
-                setPhoneStatus('idle'); 
-                enableChat(false); 
-                conn = null; 
-            });
-            
-            conn.on('error', err => {
-                logP2P("Error en sesión: " + err);
-            });
+            // Conexión SIN 'reliable: true' para máxima velocidad y compatibilidad UDP
+            conn = peer.connect(id);
+            setupConnectionListeners(conn);
         }
 
         async function sendMessage() {
@@ -741,13 +735,13 @@
             let payload = txt;
             
             if (password) {
-                try { 
-                    const encrypted = await encryptMessage(txt, password); 
+                const encrypted = await encryptMessage(txt, password); 
+                if(encrypted) {
                     payload = encrypted; 
                     addMessage(txt, 'sent'); 
-                } catch (e) { 
-                    alert("Error cifrando: " + e.message); 
-                    return; 
+                } else {
+                    alert("Error cifrando mensaje.");
+                    return;
                 }
             } else { 
                 addMessage(txt, 'sent'); 
@@ -770,14 +764,22 @@
             const b = document.getElementById('btn-connect');
             const i = document.getElementById('msg-input');
             const s = document.getElementById('btn-send');
-            if(e) { b.disabled=true; b.innerText="Conectado"; b.style.background="#4CAF50"; i.disabled=false; s.disabled=false; i.focus(); }
-            else { b.disabled=false; b.innerText="📞 Conectar"; b.style.background="#2196F3"; i.disabled=true; s.disabled=true; }
+            if(e) { 
+                b.disabled=true; b.innerText="Conectado"; b.style.background="#4CAF50"; 
+                i.disabled=false; s.disabled=false; i.focus(); 
+            } else { 
+                b.disabled=false; b.innerText="📞 Conectar"; b.style.background="#2196F3"; 
+                i.disabled=true; s.disabled=true; 
+            }
         }
 
         function addMessage(txt, type) {
             const w = document.getElementById('chat-window');
             const d = document.createElement('div');
-            d.className = `message msg-${type}`; d.innerText = txt;
+            d.className = `message msg-${type}`; 
+            // Permitir saltos de línea en mensajes recibidos
+            d.style.whiteSpace = 'pre-wrap';
+            d.innerText = txt; 
             w.appendChild(d); w.scrollTop = w.scrollHeight;
         }
 
@@ -789,7 +791,13 @@
             w.appendChild(d); w.scrollTop = w.scrollHeight;
         }
         
-        document.getElementById('msg-input').addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
+        // Detectar Enter para enviar (pero Shift+Enter para nueva línea)
+        document.getElementById('msg-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
 
         // --- GENERADOR RSS ---
         function getMimeType(extension) {
