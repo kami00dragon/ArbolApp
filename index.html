@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArbolApp - Red Social Libre </title>
+    <title>ArbolApp - Red Social Libre</title>
     
-    <!-- Librería PeerJS (Conexión Directa) -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Librería PeerJS (Conexión Directa) - Usando CDN de jsDelivr como alternativa -->
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Librería GunDB (Fallback / Mensajería tipo SMS) -->
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     
     <style>
-        /* --- ESTILOS COMPLETOS --- */
+        /* --- ESTILOS COMPLETOS (sin cambios) --- */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -157,9 +157,9 @@
             </div>
             
             <div class="sidebar-tabs">
-                <button class="tab-btn active" onclick="switchSidebarTab('editor')">✏️ Escribir</button>
-                <button class="tab-btn" onclick="switchSidebarTab('contacts')">👥 Contactos</button>
-                <button class="tab-btn" onclick="switchSidebarTab('data')">💾 Datos</button>
+                <button class="tab-btn active" onclick="switchSidebarTab('editor', event)">✏️ Escribir</button>
+                <button class="tab-btn" onclick="switchSidebarTab('contacts', event)">👥 Contactos</button>
+                <button class="tab-btn" onclick="switchSidebarTab('data', event)">💾 Datos</button>
             </div>
 
             <!-- PESTAÑA: EDITOR -->
@@ -226,6 +226,11 @@
                     <h4 style="margin:0 0 10px 0; color:#ffcc80;">🔄 Resetear Local</h4>
                     <button class="btn-secondary" onclick="clearLocalData()">Borrar borradores locales</button>
                 </div>
+                <!-- NUEVO BOTÓN: Reiniciar ID de Peer -->
+                <div style="margin-top: 20px;">
+                    <h4 style="margin:0 0 10px 0; color:#ffcc80;">🔁 Reiniciar ID Peer</h4>
+                    <button class="btn-secondary" onclick="resetPeerId()">Forzar nuevo ID P2P</button>
+                </div>
             </div>
         </aside>
 
@@ -240,8 +245,8 @@
                     <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes P2P</button>
                 </header>
                 <nav class="nav-branches">
-                    <button class="nav-btn active" onclick="switchFeedTab('my-posts')">Mis Hojas</button>
-                    <button class="nav-btn" onclick="switchFeedTab('branches')">Ramas (RSS/Mastodon)</button>
+                    <button class="nav-btn active" onclick="switchFeedTab('my-posts', event)">Mis Hojas</button>
+                    <button class="nav-btn" onclick="switchFeedTab('branches', event)">Ramas (RSS/Mastodon)</button>
                 </nav>
                 <div id="feed-container">
                     <div class="loading-frog">🌱 Cargando...</div>
@@ -312,26 +317,32 @@
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN P2P "BLINDADA" (Solución 3: WebRTC STUN masivo) ---
+        // --- CONFIGURACIÓN P2P MEJORADA (servidor alternativo y STUN reducido) ---
         const P2P_CONFIG = {
+            // Usamos un servidor público alternativo (peerjs-server.herokuapp.com)
+            // Si este servidor falla, se puede cambiar a peerjs.com o usar el propio.
+            host: 'peerjs-server.herokuapp.com',
+            port: 443,
+            path: '/peerjs',
+            secure: true,
+            // Servidores STUN reducidos a los de Google (más estables)
             iceServers: [
-                // Google STUN
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
-                // Microsoft STUN
-                { urls: 'stun:stun.microsoft.com:3478' },
-                // Twilio STUN
-                { urls: 'stun:global.stun.twilio.com:3478?transport=udp' },
-                // Mozilla
-                { urls: 'stun:stun.services.mozilla.com:3478' },
-                // Otros
-                { urls: 'stun:openrelay.metered.ca:80' }
+                { urls: 'stun:stun1.l.google.com:19302' }
             ],
             debug: 2
         };
+
+        // --- VARIABLES GLOBALES Y SETUP ---
+        const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
+        const PEER_ID_KEY = 'arbolapp_peer_id_v9';
+        const CONTACTS_KEY = 'arbolapp_contacts';
+        const CHAT_HISTORY_KEY = 'arbolapp_chat_history_'; 
+        const ENC_SALT = "arbolapp-static-salt-v2";
+        
+        let p2pManager; // Se inicializará después de que el DOM esté listo
+        let pendingConnection = null; 
+        let contacts = [];
 
         // --- GESTOR P2P HÍBRIDO (PeerJS + GunDB) ---
         class P2PManager {
@@ -367,7 +378,9 @@
                     this.myId = id;
                     localStorage.setItem(PEER_ID_KEY, id);
                     this.onLog("Nodo P2P listo. ID: " + id);
-                    if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = this.myId; 
+                    // Verificar que el elemento exista antes de asignar
+                    const myIdField = document.getElementById('my-peer-id');
+                    if (myIdField) myIdField.value = this.myId;
                     this.onStatusChange('idle', 'p2p');
                 });
 
@@ -429,14 +442,15 @@
                     this.conn = this.peer.connect(remoteId, { reliable: true });
                     let resolved = false;
 
+                    // Aumentamos timeout a 15 segundos
                     const timeout = setTimeout(() => {
                         if(!resolved) {
                             resolved = true;
-                            this.onLog("Timeout PeerJS (10s)");
+                            this.onLog("Timeout PeerJS (15s)");
                             if(this.conn) this.conn.close();
                             resolve(false);
                         }
-                    }, 10000); // 10 segundos para conectar
+                    }, 15000); // 15 segundos
 
                     this.conn.on('open', () => {
                         if(!resolved) {
@@ -478,8 +492,6 @@
                     this.onStatusChange('idle', 'p2p');
                     this.conn = null;
                     this.isConnected = false;
-                    // Nota: No cambiamos a relay automáticamente al cerrar, 
-                    // el usuario decide si quiere seguir enviando.
                 });
             }
 
@@ -509,9 +521,6 @@
                     text: text,
                     sender: this.myId,
                     timestamp: Date.now(),
-                    // Nota: El cifrado GunDB es más complejo (SEA), aquí enviamos texto plano 
-                    // para garantizar entrega en el modo SMS simple, o el usuario debe usar la contraseña pre-acordada.
-                    // Para este demo, enviamos plano en modo relay para asegurar compatibilidad.
                     type: 'relay' 
                 };
 
@@ -572,17 +581,6 @@
             }
         }
 
-        // --- VARIABLES GLOBALES Y SETUP ---
-        const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
-        const PEER_ID_KEY = 'arbolapp_peer_id_v9';
-        const CONTACTS_KEY = 'arbolapp_contacts';
-        const CHAT_HISTORY_KEY = 'arbolapp_chat_history_'; 
-        const ENC_SALT = "arbolapp-static-salt-v2";
-        
-        let p2pManager = new P2PManager();
-        let pendingConnection = null; 
-        let contacts = [];
-
         // --- CRIPTOGRAFÍA ---
         async function getCryptoKey(password) {
             const enc = new TextEncoder();
@@ -631,8 +629,14 @@
             p2pManager.sendMessage(txt);
         }
 
-        document.getElementById('msg-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendButton(); }
+        // Evento Enter en el textarea
+        document.addEventListener('DOMContentLoaded', () => {
+            const msgInput = document.getElementById('msg-input');
+            if (msgInput) {
+                msgInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendButton(); }
+                });
+            }
         });
 
         function setPhoneStatus(status, type) {
@@ -669,7 +673,6 @@
                 tagHtml = `<span class="msg-tag tag-p2p">🔒 Directo</span>`;
             } else if (type === 'sent-relay') {
                 cssClass += ' msg-sent';
-                cssClass += ' msg-relay'; // Reuse color logic via CSS or inline if needed
                 d.style.background = 'var(--msg-relay-bg)';
                 tagHtml = `<span class="msg-tag tag-relay">📡 SMS Relay</span>`;
             } else if (type === 'received-p2p') {
@@ -726,7 +729,7 @@
             navigator.clipboard.writeText(i.value).then(() => alert("ID copiado")).catch(() => document.execCommand('copy'));
         }
 
-        // --- GESTIÓN DE LLAMADAS ENTRANTES ---
+        // --- GESTIÓN DE LLAMADAS ENTRANTES (CORREGIDO) ---
         function acceptIncomingCall() {
             if (!pendingConnection) return;
             document.getElementById('incoming-modal').close();
@@ -747,7 +750,7 @@
                 p2pManager.onStatusChange('idle', 'p2p');
                 addSystemMessage("El otro usuario se ha ido.");
             });
-            p2pManager.conn.open();
+            // ❌ ELIMINADA LA LÍNEA: p2pManager.conn.open();
         }
 
         function rejectIncomingCall() {
@@ -813,13 +816,10 @@
 
         function loadChatHistory(peerId) {
             const w = document.getElementById('chat-window');
-            // Limpiar solo si es un nuevo chat, o podríamos querer mantener scroll
-            // Para simplificar, recargamos el historial visual
             w.innerHTML = ''; 
             const key = CHAT_HISTORY_KEY + peerId;
             const history = JSON.parse(localStorage.getItem(key) || '[]');
             history.forEach(h => {
-                // Re-mapear tipos antiguos a nuevos si es necesario
                 let displayType = h.type; 
                 if (displayType === 'sent') displayType = 'sent-p2p'; // Asunción por compatibilidad
                 if (displayType === 'received') displayType = 'received-p2p';
@@ -861,6 +861,14 @@
         }
 
         function clearLocalData() { if(confirm("¿Borrar locales?")) { localStorage.removeItem(LOCAL_STORAGE_KEY); loadMyPosts(); } }
+
+        // NUEVA FUNCIÓN: Reiniciar ID de Peer
+        function resetPeerId() {
+            if (confirm("¿Forzar nuevo ID P2P? Se borrará el actual y se recargará la página.")) {
+                localStorage.removeItem(PEER_ID_KEY);
+                location.reload();
+            }
+        }
 
         const DEFAULT_SOURCES = [
             { name: 'Perfil (Noticias)', url: 'https://www.perfil.com/feed/' },
@@ -918,17 +926,19 @@
             }
         }
 
-        function switchSidebarTab(n) {
+        function switchSidebarTab(tab, event) {
             document.querySelectorAll('.sidebar-content').forEach(e => e.style.display = 'none');
             document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
-            document.getElementById('tab-' + n).style.display = 'block'; event.target.classList.add('active');
+            document.getElementById('tab-' + tab).style.display = 'block';
+            event.target.classList.add('active');
         }
 
-        function switchFeedTab(t) {
-            currentFeedTab = t;
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); event.target.classList.add('active');
+        function switchFeedTab(tab, event) {
+            currentFeedTab = tab;
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
             document.getElementById('feed-container').innerHTML = '<div class="loading-frog">🌱 Cargando...</div>';
-            if (t === 'my-posts') loadMyPosts(); else loadBranches();
+            if (tab === 'my-posts') loadMyPosts(); else loadBranches();
         }
 
         async function loadMyPosts() {
@@ -959,10 +969,6 @@
                 <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${contentHtml} ${!isOwn?`<br><br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer original ↗</a>`:''}</div>`;
             return card;
         }
-        document.addEventListener('DOMContentLoaded', () => {
-            loadMyPosts();
-            loadContacts();
-        });
 
         function getMimeType(extension) {
             const ext = extension.toLowerCase();
@@ -1016,6 +1022,14 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "rss.xml"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
             alert("Archivo rss.xml generado. Súbelo a tu repositorio para actualizar el feed.");
         }
+
+        // Inicialización al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar el gestor P2P después de que el DOM esté listo
+            p2pManager = new P2PManager();
+            loadMyPosts();
+            loadContacts();
+        });
     </script>
 </body>
 </html>
