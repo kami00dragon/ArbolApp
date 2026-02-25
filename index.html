@@ -8,102 +8,38 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <style>
-        /* --- ESTILOS GENERALES --- */
+        /* --- ESTILOS COMPLETOS --- */
         :root {
-            --wood-dark: #3e2723;
-            --wood-light: #5d4037;
-            --leaf-green: #2e7d32;
-            --leaf-light: #66bb6a;
-            --flower-pink: #e91e63;
-            --text-parchment: #efebe9;
-            --border-stem: #1b5e20;
-            --sidebar-width: 340px;
+            --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
+            --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
+            --border-stem: #1b5e20; --sidebar-width: 340px;
         }
-
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Georgia', serif;
-            background-color: var(--wood-dark);
-            background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px);
-            color: var(--text-parchment);
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* --- LAYOUT --- */
-        .app-layout {
-            display: grid;
-            grid-template-columns: var(--sidebar-width) 1fr;
-            height: 100vh;
-            max-width: 1600px;
-            margin: 0 auto;
-            background-color: rgba(0,0,0,0.2);
-            position: relative;
-            z-index: 10;
-        }
-
-        /* --- SIDEBAR --- */
-        .sidebar {
-            background-color: var(--wood-light);
-            border-right: 5px solid var(--leaf-green);
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            z-index: 20;
-        }
+        body { margin: 0; padding: 0; font-family: 'Georgia', serif; background-color: var(--wood-dark); background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px); color: var(--text-parchment); height: 100vh; overflow: hidden; }
+        .app-layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; height: 100vh; max-width: 1600px; margin: 0 auto; background-color: rgba(0,0,0,0.2); position: relative; z-index: 10; }
+        
+        .sidebar { background-color: var(--wood-light); border-right: 5px solid var(--leaf-green); display: flex; flex-direction: column; height: 100%; z-index: 20; }
         .sidebar-header { background-color: var(--leaf-green); padding: 20px; text-align: center; border-bottom: 4px solid var(--flower-pink); }
         .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: white; }
-        
         .sidebar-tabs { display: flex; background: #1b5e20; }
-        .tab-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            color: #a5d6a7;
-            padding: 15px 0;
-            cursor: pointer;
-            font-weight: bold;
-            border-bottom: 3px solid transparent;
-        }
+        .tab-btn { flex: 1; background: none; border: none; color: #a5d6a7; padding: 15px 0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
         .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
 
-        /* --- FORMULARIOS --- */
+        /* Formularios y UI General */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ffcc80; }
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%; padding: 10px; background: #3e2723; border: 1px solid #795548; color: #efebe9; border-radius: 4px; font-family: inherit; box-sizing: border-box;
-        }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; background: #3e2723; border: 1px solid #795548; color: #efebe9; border-radius: 4px; font-family: inherit; box-sizing: border-box; }
         .form-group textarea { resize: vertical; min-height: 100px; }
-        
-        .btn-action {
-            width: 100%; padding: 12px; background: var(--flower-pink); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: background 0.2s; margin-bottom: 10px;
-        }
+        .btn-action { width: 100%; padding: 12px; background: var(--flower-pink); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: background 0.2s; margin-bottom: 10px; }
         .btn-action:hover { background: #c2185b; }
-        
         .btn-rss { background: #FF9800; }
         .btn-rss:hover { background: #F57C00; }
-
-        .btn-secondary {
-            width: 100%; padding: 10px; background: #5d4037; color: white; border: 1px solid #8d6e63; border-radius: 5px; font-size: 0.9rem; cursor: pointer; margin-top: 5px;
-        }
+        .btn-secondary { width: 100%; padding: 10px; background: #5d4037; color: white; border: 1px solid #8d6e63; border-radius: 5px; font-size: 0.9rem; cursor: pointer; margin-top: 5px; }
         .btn-secondary:hover { background: #4e342e; }
 
-        /* --- AGENDA DE CONTACTOS (NUEVO) --- */
+        /* Agenda de Contactos */
         .contact-list { list-style: none; padding: 0; margin: 0; }
-        .contact-item {
-            background: rgba(0,0,0,0.2);
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #5d4037;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
+        .contact-item { background: rgba(0,0,0,0.2); padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; transition: background 0.2s; }
         .contact-item:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
         .contact-info { flex-grow: 1; overflow: hidden; }
         .contact-name { font-weight: bold; color: #ffcc80; display: block; }
@@ -111,31 +47,24 @@
         .btn-delete-contact { background: none; border: none; color: #e53935; cursor: pointer; font-size: 1.1rem; padding: 0 5px; }
         .btn-delete-contact:hover { color: #ff5252; }
 
-        /* --- FEED --- */
+        /* Feed Principal */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
         .tree-trunk { max-width: 700px; margin: 0 auto; min-height: 100vh; border-left: 8px solid var(--leaf-green); border-right: 8px solid var(--leaf-green); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        
         .feed-header { background-color: var(--leaf-green); padding: 15px 20px; text-align: center; border-bottom: 5px solid var(--leaf-light); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;}
         .header-title h1 { margin: 0; font-size: 1.8rem; color: #fff; text-shadow: 2px 2px 0 var(--wood-dark); }
         .subtitle { font-size: 0.8rem; color: #e8f5e9; font-style: italic; margin-top: 2px; display: block;}
-
-        .btn-p2p-header {
-            background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; font-size: 0.9rem;
-        }
+        .btn-p2p-header { background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
         .btn-p2p-header:hover { background: #1976D2; }
-
         .nav-branches { display: flex; justify-content: center; background: #2e7d32; }
         .nav-btn { background: none; border: none; color: white; padding: 15px 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-bottom: 4px solid transparent; transition: all 0.3s; }
         .nav-btn:hover { background-color: rgba(255,255,255,0.1); }
         .nav-btn.active { border-bottom-color: var(--flower-pink); background-color: rgba(0,0,0,0.1); }
-
         #feed-container { padding: 20px; }
         .leaf-card { background-color: var(--wood-light); border-radius: 5px 30px 5px 30px; padding: 20px; margin-bottom: 25px; border: 2px solid var(--border-stem); position: relative; box-shadow: 5px 5px 0px rgba(0,0,0,0.2); transition: transform 0.2s; }
         .leaf-card:hover { transform: translateY(-3px); }
         .leaf-card::before { content: '🌿'; position: absolute; top: -15px; left: -10px; font-size: 1.5rem; transform: rotate(-20deg); }
         .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; display: flex; justify-content: space-between; }
         .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
-        
         .post-content { line-height: 1.6; font-size: 1rem; white-space: pre-wrap; word-wrap: break-word; }
         .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e27d3; background: #000; }
         img, video { width: 100%; display: block; }
@@ -146,35 +75,23 @@
         .input-group { display: flex; gap: 5px; margin-bottom: 10px; }
         .input-group input { flex: 1; }
 
-        /* --- MODAL P2P --- */
-        dialog {
-            border: 4px solid var(--leaf-green);
-            border-radius: 15px;
-            padding: 0;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            width: 95%;
-            max-width: 600px;
-            background: var(--wood-light);
-            color: var(--text-parchment);
-        }
+        /* Modal P2P */
+        dialog { border: 4px solid var(--leaf-green); border-radius: 15px; padding: 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 95%; max-width: 600px; background: var(--wood-light); color: var(--text-parchment); }
         dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-
         .p2p-header { background: var(--leaf-green); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--flower-pink); }
         .p2p-status-area { text-align: center; padding: 10px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-stem); }
         
-        /* Iconos de Teléfono */
+        /* Iconos y Animaciones */
         .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 5px; }
         .phone-blue { color: #2196F3; animation: ringing 1.5s infinite ease-in-out; }
         .phone-green { color: #4CAF50; }
         .phone-grey { color: #795548; }
-
-        @keyframes ringing {
-            0% { transform: rotate(0deg); } 10% { transform: rotate(-15deg); } 20% { transform: rotate(15deg); } 30% { transform: rotate(-15deg); } 40% { transform: rotate(15deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(0deg); }
-        }
-
+        @keyframes ringing { 0% { transform: rotate(0deg); } 10% { transform: rotate(-15deg); } 20% { transform: rotate(15deg); } 30% { transform: rotate(-15deg); } 40% { transform: rotate(15deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
+        
         .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 550px; }
         .p2p-log { height: 50px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.75rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
+        /* Chat */
         .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; }
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; }
@@ -185,25 +102,16 @@
 
         .p2p-controls { display: flex; flex-direction: column; gap: 10px; }
         .p2p-row { display: flex; gap: 10px; align-items: stretch; }
-        
         #msg-input { flex-grow: 1; background: #2a1b15; border: 1px solid #795548; color: #fff; padding: 10px; border-radius: 5px; font-family: inherit; resize: none; min-height: 50px; font-size: 1rem; }
         #msg-input:focus { outline: 2px solid var(--leaf-green); }
-
-        .btn-send { 
-            background: var(--flower-pink); color: white; border: none; padding: 0 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; min-width: 60px;
-        }
+        .btn-send { background: var(--flower-pink); color: white; border: none; padding: 0 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; min-width: 60px; }
         .btn-send:hover { background: #c2185b; }
         .btn-send:disabled { background: #555; cursor: not-allowed; }
-
         .btn-call { background: #2196F3; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; font-size: 1rem; }
 
-        /* Área de Crypto */
-        .crypto-field {
-            background: #2a1b15; border: 1px solid #ffb300; color: #ffb300; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 5px; font-family: monospace; font-size: 1rem;
-        }
+        /* Crypto y Llamada */
+        .crypto-field { background: #2a1b15; border: 1px solid #ffb300; color: #ffb300; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 5px; font-family: monospace; font-size: 1rem; }
         .crypto-label { font-size: 0.8rem; color: #ffb300; margin-bottom: 2px; display: block; }
-
-        /* Modal Llamada Entrante */
         #incoming-modal .modal-content { padding: 30px; text-align: center; background: var(--wood-light); }
         #incoming-modal h2 { color: var(--flower-pink); margin-top: 0; }
         #incoming-modal .caller-id { background: #000; color: #0f0; padding: 10px; border-radius: 5px; font-family: monospace; margin: 15px 0; word-break: break-all; border: 1px solid var(--leaf-green); }
@@ -242,17 +150,14 @@
                     <label>Título de la Hoja</label>
                     <input type="text" id="post-title" placeholder="Ej: Un nuevo día en el bosque">
                 </div>
-
                 <div class="form-group">
                     <label>Contenido (Texto)</label>
                     <textarea id="post-content" placeholder="Escribe aquí tus pensamientos..."></textarea>
                 </div>
-
                 <div class="form-group">
                     <label>Archivo Multimedia (Opcional)</label>
                     <input type="text" id="post-media" placeholder="Ej: foto.jpg (debe estar en /media)">
                 </div>
-
                 <div class="form-group">
                     <label>Tipo de Archivo</label>
                     <select id="post-type">
@@ -263,19 +168,14 @@
                         <option value="none">Solo Texto</option>
                     </select>
                 </div>
-
                 <button class="btn-action" onclick="publishPost()">🌱 Publicar (Guardar Local)</button>
-                <div style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-bottom:15px;">
-                    Esto guarda en tu navegador y lo muestra al instante.
-                </div>
+                <div style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-bottom:15px;">Esto guarda en tu navegador y lo muestra al instante.</div>
             </div>
 
-            <!-- PESTAÑA: CONTACTOS (NUEVO) -->
+            <!-- PESTAÑA: CONTACTOS -->
             <div id="tab-contacts" class="sidebar-content" style="display: none;">
                 <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px; margin-top:0;">👥 Agenda P2P</h3>
-                <p style="font-size:0.8rem; color:#aaa; margin-bottom:15px;">
-                    Guarda los IDs de tus amigos con nombres fáciles de recordar.
-                </p>
+                <p style="font-size:0.8rem; color:#aaa; margin-bottom:15px;">Guarda los IDs de tus amigos con nombres fáciles de recordar.</p>
 
                 <div class="form-group">
                     <label>Nombre del Contacto</label>
@@ -288,36 +188,24 @@
                 <button class="btn-action" onclick="addContact()">➕ Agregar a Agenda</button>
 
                 <hr style="border:0; border-top:1px dashed #5d4037; margin:20px 0;">
-
-                <ul id="contact-list" class="contact-list">
-                    <!-- Se llena con JS -->
-                </ul>
+                <ul id="contact-list" class="contact-list"></ul>
             </div>
 
-            <!-- PESTAÑA: GESTIÓN DE DATOS -->
+            <!-- PESTAÑA: DATOS -->
             <div id="tab-data" class="sidebar-content" style="display: none;">
                 <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px;">📦 Sincronización</h3>
-                
                 <div style="background: rgba(255, 152, 0, 0.1); padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #FF9800;">
                     <h4 style="margin:0 0 5px 0; color:#FF9800;">📡 Generador RSS</h4>
-                    <p style="font-size:0.8rem; color:#ffe0b2; margin-bottom:10px;">
-                        Para que Mastodon pueda seguirte, necesitas actualizar el archivo <code>rss.xml</code>.
-                    </p>
+                    <p style="font-size:0.8rem; color:#ffe0b2; margin-bottom:10px;">Para que Mastodon pueda seguirte, necesitas actualizar el archivo <code>rss.xml</code>.</p>
                     <div class="form-group">
                         <label style="font-size:0.8rem;">URL de tu Sitio (Base):</label>
                         <input type="text" id="site-url-input" placeholder="https://usuario.github.io/repo/">
                     </div>
                     <button class="btn-action btn-rss" onclick="generateAndDownloadRSS()">⬇️ Descargar rss.xml</button>
                 </div>
-
                 <hr style="border:0; border-top:1px dashed #5d4037; margin:20px 0;">
-
-                <p style="font-size:0.85rem; color:#cfd8dc; margin-bottom:15px;">
-                    Tus posts se guardan localmente. Para hacerlos permanentes en la web, exporta el archivo JSON.
-                </p>
-                
+                <p style="font-size:0.85rem; color:#cfd8dc; margin-bottom:15px;">Tus posts se guardan localmente. Para hacerlos permanentes en la web, exporta el archivo JSON.</p>
                 <button class="btn-action" onclick="exportToJson()">⬇️ Descargar posts.json</button>
-                
                 <div style="margin-top: 20px;">
                     <h4 style="margin:0 0 10px 0; color:#ffcc80;">🔄 Resetear Local</h4>
                     <button class="btn-secondary" onclick="clearLocalData()">Borrar borradores locales</button>
@@ -355,7 +243,6 @@
             <h3>🔒 Chat P2P</h3>
             <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
-        
         <div class="p2p-status-area">
             <div id="status-icon" class="phone-icon phone-grey">📱</div>
             <div id="status-text" style="margin-top:5px; font-weight:bold;">Desconectado</div>
@@ -364,9 +251,9 @@
         <div class="p2p-body">
             <div id="p2p-log" class="p2p-log">Iniciando...</div>
             
-            <!-- Cifrado Opcional -->
+            <!-- Cifrado Transparente -->
             <div style="margin-bottom: 10px;">
-                <label class="crypto-label">🔑 Contraseña (Opcional - Si se usa, cifra los mensajes):</label>
+                <label class="crypto-label">🔑 Contraseña (Opcional - Cifra si se escribe):</label>
                 <input type="password" id="crypto-password" class="crypto-field" placeholder="Deja vacío para texto plano">
             </div>
 
@@ -382,7 +269,6 @@
 
             <div style="margin-bottom: 10px;">
                 <label style="font-size:0.8rem; color:#aaa;">Conectar con:</label>
-                <!-- Input Manual o Selección de Agenda -->
                 <input type="text" id="remote-peer-id" placeholder="ID o selecciona de Agenda..." style="width:100%; padding:8px; background:#222; border:1px solid #555; color:#fff; border-radius:4px; box-sizing:border-box;">
             </div>
 
@@ -390,7 +276,6 @@
                 <div class="p2p-row">
                     <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Conectar</button>
                 </div>
-                
                 <div class="p2p-row">
                     <textarea id="msg-input" placeholder="Escribe tu mensaje aquí..." disabled></textarea>
                     <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
@@ -427,7 +312,7 @@
 
         // --- VARIABLES GLOBALES ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
-        const PEER_ID_KEY = 'arbolapp_peer_id_v3'; // ID Persistente
+        const PEER_ID_KEY = 'arbolapp_peer_id_v4'; // ID Persistente
         const CONTACTS_KEY = 'arbolapp_contacts';
         const ENC_SALT = "arbolapp-static-salt-v1";
         
@@ -436,7 +321,7 @@
         let connectionTimeout = null;
         let contacts = [];
 
-        // --- CRIPTOGRAFÍA (Desacoplada de la conexión) ---
+        // --- CRIPTOGRAFÍA (Capa transparente) ---
         async function getCryptoKey(password) {
             const enc = new TextEncoder();
             const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
@@ -474,23 +359,18 @@
             console.log("[P2P]", message);
         }
 
-        // --- INICIO P2P CON ID PERSISTENTE ---
+        // --- INICIO P2P (Con ID Persistente) ---
         window.addEventListener('load', () => {
-            // Cargar Contactos
-            loadContacts();
-
-            // Cargar ID Guardado o generar nuevo
+            loadContacts(); // Cargar agenda
             let savedId = localStorage.getItem(PEER_ID_KEY);
-            
             logP2P("Iniciando nodo P2P (ID Persistente: " + (savedId ? "Sí" : "No") + ")...");
             
+            // Inicializar Peer
             peer = new Peer(savedId, P2P_CONFIG);
 
             peer.on('open', (id) => { 
                 myId = id;
-                // Guardar ID (si era nuevo)
                 localStorage.setItem(PEER_ID_KEY, id);
-                
                 logP2P("Red lista. Tu ID: " + id);
                 if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; 
                 if(document.getElementById('p2p-modal').open) setPhoneStatus('idle');
@@ -522,7 +402,7 @@
             });
         });
 
-        // --- GESTIÓN DE CONTACTOS ---
+        // --- AGENDA DE CONTACTOS ---
         function loadContacts() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContacts();
@@ -534,12 +414,7 @@
             contacts.forEach((c, index) => {
                 const li = document.createElement('li');
                 li.className = 'contact-item';
-                li.onclick = (e) => {
-                    // Si no clicamos en el botón de borrar
-                    if(!e.target.classList.contains('btn-delete-contact')) {
-                        selectContact(c.id);
-                    }
-                };
+                li.onclick = (e) => { if(!e.target.classList.contains('btn-delete-contact')) selectContact(c.id); };
                 li.innerHTML = `
                     <div class="contact-info">
                         <span class="contact-name">${c.name}</span>
@@ -555,14 +430,10 @@
             const name = document.getElementById('contact-name').value.trim();
             const id = document.getElementById('contact-id').value.trim();
             if(!name || !id) return alert("Completa nombre e ID");
-
             contacts.push({ name, id });
             localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
-            
-            document.getElementById('contact-name').value = '';
-            document.getElementById('contact-id').value = '';
+            document.getElementById('contact-name').value = ''; document.getElementById('contact-id').value = '';
             renderContacts();
-            alert("Contacto guardado.");
         }
 
         function deleteContact(index) {
@@ -575,12 +446,11 @@
 
         function selectContact(id) {
             document.getElementById('remote-peer-id').value = id;
-            // Opcional: Cambiar a la pestaña del chat si no está abierto
             openP2P();
             document.getElementById('msg-input').focus();
         }
 
-        // --- LÓGICA DE CONEXIÓN (Basada en versión funcional) ---
+        // --- LÓGICA DE CONEXIÓN (Restaurada del código funcional) ---
         function connectToPeer() {
             const remoteId = document.getElementById('remote-peer-id').value.trim();
             if (!remoteId) return alert("Ingresa ID remoto");
@@ -589,9 +459,10 @@
             setPhoneStatus('calling');
             logP2P("Intentando conectar a: " + remoteId);
             
-            // USAMOS RELIABLE: TRUE como en la versión funcional
+            // CLAVE: USAR reliable: true como en la versión que funcionaba
             conn = peer.connect(remoteId, { reliable: true });
 
+            // Timeout de 15 segundos (igual que la funcional)
             connectionTimeout = setTimeout(() => {
                 if (!conn.open) {
                     logP2P("Timeout. Revisa Firewall/Red.");
@@ -644,15 +515,13 @@
             connection.on('error', (err) => logP2P("Error en sesión: " + err));
         }
 
-        // --- MANEJO DE LLAMADAS ENTRANTES ---
+        // --- GESTIÓN DE LLAMADAS ---
         function acceptIncomingCall() {
             if (!pendingConnection) return;
             document.getElementById('incoming-modal').close();
             logP2P("Conexión aceptada.");
-            
             conn = pendingConnection;
             pendingConnection = null;
-
             if (!document.getElementById('p2p-modal').open) openP2P();
             handleConnection(conn);
         }
@@ -665,7 +534,7 @@
             pendingConnection = null;
         }
 
-        // --- MENSAJERÍA Y CRIPTOGRAFÍA ---
+        // --- MANEJO DE DATOS (Cifrado Transparente) ---
         async function handleIncomingData(data) {
             const password = document.getElementById('crypto-password').value;
             
@@ -693,7 +562,7 @@
             const password = document.getElementById('crypto-password').value;
             let payload = txt;
             
-            // Cifrado solo si hay contraseña
+            // Si hay clave, ciframos. Si no, enviamos texto plano. Simple.
             if (password) {
                 const encrypted = await encryptMessage(txt, password); 
                 if(encrypted) {
@@ -881,7 +750,6 @@
                 const m = post.content.match(/src="([^"]+)"/);
                 media = m ? `<div class="media-container"><img src="${m[1]}"></div>` : `<div class="media-container"><img src="https://picsum.photos/seed/${post.title.replace(/\s/g,'')}/600/300" style="opacity:0.8"></div>`;
             }
-            
             let contentHtml = '';
             if (isOwn) {
                 contentHtml = post.content.replace(/&/g, "&amp;")
@@ -892,7 +760,6 @@
             } else {
                 contentHtml = post.content;
             }
-
             card.innerHTML = `
                 <div class="post-meta"><span>📅 ${new Date(post.date).toLocaleDateString()}</span><span>${isOwn?'✏️ Propio':'🌳 '+(post.author||'Externo')}</span></div>
                 <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${contentHtml} ${!isOwn?`<br><br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer original ↗</a>`:''}</div>`;
