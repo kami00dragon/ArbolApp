@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre (E2E)</title>
-    <!-- Librería PeerJS -->
+    <!-- 1. Librería PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
-    <!-- RSS Link -->
+    <!-- 2. ENLAZE AL RSS -->
     <link rel="alternate" type="application/rss+xml" title="Feed de ArbolApp" href="rss.xml">
     
     <style>
@@ -151,6 +151,7 @@
         
         .p2p-instructions { margin: 10px 20px; padding: 15px; background: rgba(46, 125, 50, 0.1); border: 1px dashed var(--leaf-light); border-radius: 8px; font-size: 0.85rem; color: #cfd8dc; }
         .p2p-instructions h4 { margin: 0 0 10px 0; color: var(--leaf-light); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+        .p2p-instructions b { color: #fff; }
 
         /* Iconos de Teléfono */
         .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 5px; }
@@ -351,7 +352,7 @@
             <div id="chat-window" class="chat-window"></div>
 
             <div style="margin-bottom: 10px;">
-                <label style="font-size:0.8rem; color:#aaa;">Tu ID:</label>
+                <label style="font-size:0.8rem; color:#aaa;">Tu ID (Persistente):</label>
                 <div style="display:flex; gap:5px;">
                     <input type="text" id="my-peer-id" readonly style="flex:1; background:#222; border:1px solid #555; color:#fff; padding:8px; font-family:monospace;">
                     <button onclick="copyMyId()" style="cursor:pointer; background:#555; color:white; border:none; border-radius:4px; padding:0 10px;">📋</button>
@@ -393,32 +394,28 @@
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN P2P ROBUSTA (HÍBRIDA) ---
-        // Usamos la sintaxis antigua compatible 'url' (tuya) + nuevos servidores STUN de alta disponibilidad (Twilio/Mozilla)
+        // --- CONFIGURACIÓN P2P (LA MISMA QUE LA VERSIÓN FUNCIONAL) ---
         const P2P_CONFIG = {
-            debug: 2, // Debug alto para ver el fallo exacto si ocurre
             iceServers: [
-                // 1. Tus servidores originales (Sintaxis antigua para compatibilidad)
                 { url: 'stun:stun.l.google.com:19302' },
                 { url: 'stun:stun1.l.google.com:19302' },
                 { url: 'stun:stun2.l.google.com:19302' },
                 { url: 'stun:stun3.l.google.com:19302' },
-                { url: 'stun:stun4.l.google.com:19302' },
-                // 2. Servidores Twilio (Industriales, usados por apps de cripto/mensajería)
-                { urls: 'stun:global.stun.twilio.com:3478' },
-                { urls: 'stun:stun.twilio.com:3478' },
-                // 3. Servidores Mozilla (Alternativa robusta)
-                { urls: 'stun:stun.services.mozilla.com' }
-            ]
+                { url: 'stun:stun4.l.google.com:19302' }
+            ],
+            debug: 2
         };
 
         // --- VARIABLES GLOBALES ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         const ENC_SALT = "arbolapp-static-salt-v1";
+        const PEER_ID_KEY = 'arbolapp_peer_id_v2'; // Clave para guardar el ID persistente
+        
         let peer = null, conn = null, myId = null;
         let pendingConnection = null; 
+        let connectionTimeout = null;
 
-        // --- CRIPTOGRAFÍA ---
+        // --- CRIPTOGRAFÍA (Se mantiene, no afecta a la conexión) ---
         async function getCryptoKey(password) {
             const enc = new TextEncoder();
             const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
@@ -453,43 +450,59 @@
                 logDiv.innerHTML += `<div>[${time}] ${message}</div>`; 
                 logDiv.scrollTop = logDiv.scrollHeight; 
             }
+            console.log("[P2P]", message);
         }
 
-        // --- INICIO P2P ---
+        // --- INICIO P2P CON ID PERSISTENTE ---
         window.addEventListener('load', () => {
-            logP2P("Iniciando nodo P2P...");
-            peer = new Peer(null, P2P_CONFIG);
+            // 1. Intentar recuperar ID anterior
+            let savedId = localStorage.getItem(PEER_ID_KEY);
+            // Si no existe, PeerJS generará uno nuevo
+            
+            logP2P("Iniciando nodo P2P (ID " + (savedId ? "Persistente" : "Nuevo") + ")...");
+            
+            peer = new Peer(savedId, P2P_CONFIG);
 
-            peer.on('open', id => { 
-                myId = id; 
-                logP2P("ID asignado: " + id);
+            peer.on('open', (id) => { 
+                myId = id;
+                // Guardar el ID si es nuevo o asegurar que esté guardado
+                localStorage.setItem(PEER_ID_KEY, id);
+                
+                logP2P("Red lista. Tu ID: " + id);
                 if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; 
                 if(document.getElementById('p2p-modal').open) setPhoneStatus('idle');
             });
 
-            peer.on('connection', c => {
-                logP2P("Intento de conexión entrante de: " + c.peer);
+            // Manejar error si el ID ya está en uso (muy raro con UUIDs)
+            peer.on('error', (err) => {
+                if(err.type === 'unavailable-id') {
+                    logP2P("ID en uso. Generando nuevo...");
+                    localStorage.removeItem(PEER_ID_KEY);
+                    location.reload(); // Recargar para generar ID nuevo
+                } else {
+                    console.error(err);
+                    logP2P("Error Peer: " + err.type);
+                    alert("Error de red P2P (" + err.type + ")");
+                }
+            });
+
+            peer.on('connection', (c) => {
+                logP2P("Llamada entrante de: " + c.peer);
                 pendingConnection = c;
                 
                 const modal = document.getElementById('incoming-modal');
                 const idDisplay = document.getElementById('caller-id-display');
                 idDisplay.innerText = c.peer;
                 modal.showModal();
-            });
-
-            peer.on('error', err => {
-                console.error(err);
-                logP2P("Error Peer: " + err.type);
-                if(err.type === 'peer-unavailable') {
-                    alert("El usuario no existe o está desconectado.");
-                    setPhoneStatus('idle');
-                } else if (err.type === 'network') {
-                    alert("Error de red. Comprueba tu conexión a Internet.");
+                
+                // Sonido o notificación
+                if(document.visibilityState === 'visible') {
+                    // Opcional: alert("Llamada entrante");
                 }
             });
             
             peer.on('disconnected', () => {
-                logP2P("Desconectado del servidor de señalización. Reintentando...");
+                logP2P("Desconectado del servidor. Reintentando...");
                 if(peer && !peer.destroyed) peer.reconnect();
             });
         });
@@ -500,14 +513,8 @@
             const modal = document.getElementById('incoming-modal');
             modal.close();
             
-            logP2P("Conexión aceptada. Estableciendo túnel...");
+            logP2P("Conexión aceptada.");
             
-            // IMPORTANTE: Cerramos cualquier conexión previa para evitar conflictos de ICE
-            if(conn && conn.open) {
-                logP2P("Cerrando conexión previa para evitar conflictos...");
-                conn.close();
-            }
-
             conn = pendingConnection;
             pendingConnection = null;
 
@@ -516,7 +523,7 @@
                 p2pModal.showModal();
             }
 
-            setupConnectionListeners(conn);
+            handleConnection(conn);
         }
 
         function rejectIncomingCall() {
@@ -529,7 +536,79 @@
             pendingConnection = null;
         }
 
-        // --- GESTIÓN DE CONEXIÓN ---
+        // --- LÓGICA DE CONEXIÓN ROBUSTA (Basada en código funcional) ---
+        function connectToPeer() {
+            const remoteId = document.getElementById('remote-peer-id').value.trim();
+            if (!remoteId) return alert("Ingresa ID remoto");
+            
+            if(conn && conn.open) {
+                conn.close();
+            }
+
+            setPhoneStatus('calling');
+            logP2P("Intentando conectar a: " + remoteId);
+
+            // IMPORTANTE: Usamos 'reliable: true' como en la versión funcional
+            conn = peer.connect(remoteId, { reliable: true });
+
+            // Timeout de seguridad (como en el código funcional)
+            connectionTimeout = setTimeout(() => {
+                if (!conn.open) {
+                    logP2P("Timeout (15s). Revisa Firewall/Red.");
+                    setPhoneStatus('idle');
+                    alert("Tiempo de espera agotado. Asegúrate de que ambos tengan la página abierta.");
+                    if(conn) conn.close();
+                }
+            }, 15000);
+
+            conn.on('open', () => {
+                clearTimeout(connectionTimeout);
+                logP2P("Conexión establecida.");
+                setPhoneStatus('connected'); 
+                enableChat(true); 
+                addSystemMessage("Conectado con éxito.");
+            });
+
+            conn.on('data', handleIncomingData);
+
+            conn.on('close', () => {
+                logP2P("Conexión cerrada.");
+                setPhoneStatus('idle'); 
+                enableChat(false); 
+                conn = null; 
+                addSystemMessage("Desconectado.");
+            });
+
+            conn.on('error', (err) => {
+                logP2P("Error en conexión: " + err.type);
+                setPhoneStatus('idle');
+                alert("Error de conexión: " + err.type);
+            });
+        }
+
+        function handleConnection(connection) {
+            // Configurar listeners para conexión entrante también
+            connection.on('open', () => {
+                logP2P("Llamada aceptada exitosamente.");
+                setPhoneStatus('connected'); 
+                enableChat(true); 
+                addSystemMessage("Conectado.");
+            });
+
+            connection.on('data', handleIncomingData);
+
+            connection.on('close', () => {
+                logP2P("El otro usuario se ha ido.");
+                setPhoneStatus('idle'); 
+                enableChat(false); 
+                conn = null; 
+            });
+
+            connection.on('error', (err) => {
+                logP2P("Error en sesión: " + err);
+            });
+        }
+
         async function handleIncomingData(data) {
             const password = document.getElementById('crypto-password').value;
             if (data && typeof data === 'object' && data.encrypted) {
@@ -548,54 +627,12 @@
             }
         }
 
-        function setupConnectionListeners(connection) {
-            connection.on('open', () => {
-                logP2P("Conexión Lógica abierta. Esperando túnel ICE...");
-                setPhoneStatus('calling'); // Mantenemos en "Conectando" hasta que ICE esté listo
-            });
-
-            // ESCUCHA CRÍTICA PARA "NEGOTIATION FAILED"
-            connection.on('iceStateChange', (iceState) => {
-                logP2P("Estado ICE: " + iceState);
-                if (iceState === 'connected' || iceState === 'completed') {
-                    logP2P("¡Túnel ICE establecido con éxito!");
-                    setPhoneStatus('connected'); 
-                    enableChat(true); 
-                    addSystemMessage("Conectado Seguro.");
-                } else if (iceState === 'disconnected') {
-                    logP2P("ICE Desconectado. Reintentando...");
-                    addSystemMessage("Desconexión temporal de red...");
-                } else if (iceState === 'failed' || iceState === 'closed') {
-                    logP2P("FALLO ICE: " + iceState);
-                    setPhoneStatus('idle'); 
-                    enableChat(false); 
-                    conn = null; 
-                    addSystemMessage("Error de túnel (NAT/Firewall). Intenta conectar desde WiFi.");
-                }
-            });
-
-            connection.on('data', handleIncomingData);
-
-            connection.on('close', () => {
-                logP2P("Conexión cerrada por el par.");
-                setPhoneStatus('idle'); 
-                enableChat(false); 
-                conn = null; 
-                addSystemMessage("Desconectado.");
-            });
-
-            connection.on('error', (err) => {
-                logP2P("Error en canal: " + err);
-                addSystemMessage("Error de comunicación.");
-            });
-        }
-
         // --- INTERFAZ USUARIO ---
         function openP2P() { 
             document.getElementById('p2p-modal').showModal(); 
             if(myId) {
                 setPhoneStatus('idle');
-                logP2P("Listo para conectar.");
+                logP2P("Listo para conectar. ID Persistente activo.");
             } else {
                 logP2P("Esperando ID...");
             }
@@ -609,22 +646,6 @@
             const i = document.getElementById('my-peer-id'); 
             i.select(); 
             navigator.clipboard.writeText(i.value).then(() => alert("ID copiado")).catch(() => document.execCommand('copy'));
-        }
-
-        function connectToPeer() {
-            const id = document.getElementById('remote-peer-id').value.trim();
-            if(!id) return alert("Ingresa ID remoto");
-            
-            if(conn && conn.open) {
-                conn.close();
-            }
-
-            setPhoneStatus('calling');
-            logP2P("Iniciando handshake con " + id + "...");
-            
-            // Creamos la conexión sin parámetros extra para dejar que PeerJS negocie el mejor camino
-            conn = peer.connect(id);
-            setupConnectionListeners(conn);
         }
 
         async function sendMessage() {
@@ -657,7 +678,7 @@
             const t = document.getElementById('status-text');
             if(!i) return;
             if(s==='idle') { i.className='phone-icon phone-grey'; t.innerText="Desconectado"; }
-            else if(s==='calling') { i.className='phone-icon phone-blue'; t.innerText="Negociando túnel..."; }
+            else if(s==='calling') { i.className='phone-icon phone-blue'; t.innerText="Conectando..."; }
             else if(s==='connected') { i.className='phone-icon phone-green'; t.innerText="En línea (E2E)"; }
         }
 
