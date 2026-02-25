@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre (E2E)</title>
-    <!-- 1. Librería PeerJS -->
+    <!-- Librería PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
-    <!-- 2. ENLAZE AL RSS -->
+    <!-- RSS Link -->
     <link rel="alternate" type="application/rss+xml" title="Feed de ArbolApp" href="rss.xml">
     
     <style>
@@ -163,7 +163,7 @@
             0% { transform: rotate(0deg); } 10% { transform: rotate(-15deg); } 20% { transform: rotate(15deg); } 30% { transform: rotate(-15deg); } 40% { transform: rotate(15deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(0deg); }
         }
 
-        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 550px; }
+        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 580px; }
         .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.75rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
         .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; }
@@ -172,6 +172,7 @@
         .msg-received { background: #555; color: white; align-self: flex-start; }
         .msg-error { background: #511; color: #ffcccc; border: 1px solid #f00; font-size: 0.8rem; }
         .msg-locked { background: #443300; color: #ffecb3; border: 1px solid #ffb300; font-style: italic; }
+        .msg-system { color: #aaa; text-align: center; font-size: 0.8rem; font-style: italic; margin: 5px 0; }
 
         .p2p-controls { display: flex; flex-direction: column; gap: 10px; }
         .p2p-row { display: flex; gap: 10px; align-items: stretch; }
@@ -189,10 +190,28 @@
 
         .btn-call { background: #2196F3; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; font-size: 1rem; }
 
-        .crypto-field {
-            background: #2a1b15; border: 1px solid #ffb300; color: #ffb300; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 5px; font-family: monospace; font-size: 1rem;
+        /* --- ÁREA DE CRIPTOGRAFÍA (Mejorada) --- */
+        .crypto-area {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #795548;
+            margin-bottom: 15px;
+        }
+        .crypto-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;
         }
         .crypto-label { font-size: 0.8rem; color: #ffb300; margin-bottom: 2px; display: block; }
+        .crypto-row { display: flex; gap: 5px; }
+        .crypto-field {
+            flex-grow: 1; background: #2a1b15; border: 1px solid #ffb300; color: #ffb300; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 1rem;
+        }
+        .btn-set-key {
+            background: #ffb300; color: #000; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold; white-space: nowrap;
+        }
+        .btn-set-key:hover { background: #ffca28; }
+        .btn-set-key:disabled { background: #555; color: #888; cursor: default; }
+        .key-status { font-size: 0.7rem; margin-top: 3px; color: #aaa; text-align: right; height: 1rem; }
 
         /* --- ESTILO MODAL DE LLAMADA ENTRANTE --- */
         #incoming-modal .modal-content {
@@ -336,17 +355,19 @@
             <div id="status-text" style="margin-top:5px; font-weight:bold;">Desconectado</div>
         </div>
 
-        <div class="p2p-instructions">
-            <h4>🔐 Cifrado E2E</h4>
-            <p style="margin:0; font-size:0.8rem;">Acuerda una <b>Contraseña</b> con tu amigo fuera de esta app. Escríbela abajo para cifrar el chat.</p>
-        </div>
-
         <div class="p2p-body">
             <div id="p2p-log" class="p2p-log">Iniciando...</div>
             
-            <div style="margin-bottom: 10px;">
-                <label class="crypto-label">🔑 Contraseña de Cifrado (Compartida):</label>
-                <input type="password" id="crypto-password" class="crypto-field" placeholder="Escribe la clave secreta aquí...">
+            <!-- NUEVA ÁREA DE CRIPTOGRAFÍA CON BOTÓN -->
+            <div class="crypto-area">
+                <div class="crypto-header">
+                    <span class="crypto-label">🔑 Contraseña (Escribe y pulsa el botón):</span>
+                </div>
+                <div class="crypto-row">
+                    <input type="password" id="crypto-password" class="crypto-field" placeholder="Clave compartida...">
+                    <button id="btn-set-key" class="btn-set-key" onclick="setCryptoKey()">Establecer Clave</button>
+                </div>
+                <div id="key-status-text" class="key-status">Esperando clave...</div>
             </div>
 
             <div id="chat-window" class="chat-window"></div>
@@ -394,7 +415,7 @@
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN P2P (LA MISMA QUE LA VERSIÓN FUNCIONAL) ---
+        // --- CONFIGURACIÓN P2P ROBUSTA ---
         const P2P_CONFIG = {
             iceServers: [
                 { url: 'stun:stun.l.google.com:19302' },
@@ -409,13 +430,14 @@
         // --- VARIABLES GLOBALES ---
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         const ENC_SALT = "arbolapp-static-salt-v1";
-        const PEER_ID_KEY = 'arbolapp_peer_id_v2'; // Clave para guardar el ID persistente
+        const PEER_ID_KEY = 'arbolapp_peer_id_v2';
         
         let peer = null, conn = null, myId = null;
         let pendingConnection = null; 
         let connectionTimeout = null;
+        let isKeyActive = false; // Nuevo estado
 
-        // --- CRIPTOGRAFÍA (Se mantiene, no afecta a la conexión) ---
+        // --- CRIPTOGRAFÍA ---
         async function getCryptoKey(password) {
             const enc = new TextEncoder();
             const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
@@ -453,32 +475,25 @@
             console.log("[P2P]", message);
         }
 
-        // --- INICIO P2P CON ID PERSISTENTE ---
+        // --- INICIO P2P ---
         window.addEventListener('load', () => {
-            // 1. Intentar recuperar ID anterior
             let savedId = localStorage.getItem(PEER_ID_KEY);
-            // Si no existe, PeerJS generará uno nuevo
-            
             logP2P("Iniciando nodo P2P (ID " + (savedId ? "Persistente" : "Nuevo") + ")...");
-            
             peer = new Peer(savedId, P2P_CONFIG);
 
             peer.on('open', (id) => { 
                 myId = id;
-                // Guardar el ID si es nuevo o asegurar que esté guardado
                 localStorage.setItem(PEER_ID_KEY, id);
-                
                 logP2P("Red lista. Tu ID: " + id);
                 if(document.getElementById('my-peer-id')) document.getElementById('my-peer-id').value = myId; 
                 if(document.getElementById('p2p-modal').open) setPhoneStatus('idle');
             });
 
-            // Manejar error si el ID ya está en uso (muy raro con UUIDs)
             peer.on('error', (err) => {
                 if(err.type === 'unavailable-id') {
                     logP2P("ID en uso. Generando nuevo...");
                     localStorage.removeItem(PEER_ID_KEY);
-                    location.reload(); // Recargar para generar ID nuevo
+                    location.reload(); 
                 } else {
                     console.error(err);
                     logP2P("Error Peer: " + err.type);
@@ -489,16 +504,10 @@
             peer.on('connection', (c) => {
                 logP2P("Llamada entrante de: " + c.peer);
                 pendingConnection = c;
-                
                 const modal = document.getElementById('incoming-modal');
                 const idDisplay = document.getElementById('caller-id-display');
                 idDisplay.innerText = c.peer;
                 modal.showModal();
-                
-                // Sonido o notificación
-                if(document.visibilityState === 'visible') {
-                    // Opcional: alert("Llamada entrante");
-                }
             });
             
             peer.on('disconnected', () => {
@@ -512,17 +521,11 @@
             if (!pendingConnection) return;
             const modal = document.getElementById('incoming-modal');
             modal.close();
-            
             logP2P("Conexión aceptada.");
-            
             conn = pendingConnection;
             pendingConnection = null;
-
             const p2pModal = document.getElementById('p2p-modal');
-            if (!p2pModal.open) {
-                p2pModal.showModal();
-            }
-
+            if (!p2pModal.open) p2pModal.showModal();
             handleConnection(conn);
         }
 
@@ -530,31 +533,24 @@
             if (!pendingConnection) return;
             const modal = document.getElementById('incoming-modal');
             modal.close();
-            
             logP2P("Conexión rechazada.");
             pendingConnection.close();
             pendingConnection = null;
         }
 
-        // --- LÓGICA DE CONEXIÓN ROBUSTA (Basada en código funcional) ---
+        // --- LÓGICA DE CONEXIÓN ---
         function connectToPeer() {
             const remoteId = document.getElementById('remote-peer-id').value.trim();
             if (!remoteId) return alert("Ingresa ID remoto");
-            
-            if(conn && conn.open) {
-                conn.close();
-            }
+            if(conn && conn.open) conn.close();
 
             setPhoneStatus('calling');
             logP2P("Intentando conectar a: " + remoteId);
-
-            // IMPORTANTE: Usamos 'reliable: true' como en la versión funcional
             conn = peer.connect(remoteId, { reliable: true });
 
-            // Timeout de seguridad (como en el código funcional)
             connectionTimeout = setTimeout(() => {
                 if (!conn.open) {
-                    logP2P("Timeout (15s). Revisa Firewall/Red.");
+                    logP2P("Timeout. Revisa Firewall/Red.");
                     setPhoneStatus('idle');
                     alert("Tiempo de espera agotado. Asegúrate de que ambos tengan la página abierta.");
                     if(conn) conn.close();
@@ -566,7 +562,7 @@
                 logP2P("Conexión establecida.");
                 setPhoneStatus('connected'); 
                 enableChat(true); 
-                addSystemMessage("Conectado con éxito.");
+                addSystemMessage("Conectado. Establece la clave para cifrar.");
             });
 
             conn.on('data', handleIncomingData);
@@ -577,6 +573,7 @@
                 enableChat(false); 
                 conn = null; 
                 addSystemMessage("Desconectado.");
+                resetKeyUI(); // Resetear clave al desconectar
             });
 
             conn.on('error', (err) => {
@@ -587,42 +584,106 @@
         }
 
         function handleConnection(connection) {
-            // Configurar listeners para conexión entrante también
             connection.on('open', () => {
                 logP2P("Llamada aceptada exitosamente.");
                 setPhoneStatus('connected'); 
                 enableChat(true); 
-                addSystemMessage("Conectado.");
+                addSystemMessage("Conectado. Establece la clave para cifrar.");
             });
-
             connection.on('data', handleIncomingData);
-
             connection.on('close', () => {
                 logP2P("El otro usuario se ha ido.");
                 setPhoneStatus('idle'); 
                 enableChat(false); 
                 conn = null; 
+                resetKeyUI();
             });
+            connection.on('error', (err) => logP2P("Error en sesión: " + err));
+        }
 
-            connection.on('error', (err) => {
-                logP2P("Error en sesión: " + err);
-            });
+        // --- NUEVO SISTEMA DE CLAVE (BOTÓN) ---
+        function setCryptoKey() {
+            const password = document.getElementById('crypto-password').value;
+            if (!password) {
+                alert("Escribe una contraseña primero.");
+                return;
+            }
+            
+            if (!conn || !conn.open) {
+                alert("Debes estar conectado para establecer la clave.");
+                return;
+            }
+
+            // 1. Actualizar UI Local
+            isKeyActive = true;
+            document.getElementById('crypto-password').disabled = true;
+            document.getElementById('crypto-password').style.background = '#1b5e20';
+            document.getElementById('btn-set-key').disabled = true;
+            document.getElementById('btn-set-key').innerText = "✅ Activa";
+            document.getElementById('key-status-text').innerText = "Clave cargada y lista.";
+            document.getElementById('key-status-text').style.color = "#4CAF50";
+
+            logP2P("Clave de cifrado establecida.");
+
+            // 2. Enviar Handshake (Saludo) para confirmar el canal
+            // Esto desbloquea cualquier sensación de "trabado" y confirma al otro usuario
+            try {
+                conn.send({ type: 'HANDSHAKE', msg: 'KEY_READY' });
+                addSystemMessage("Has activado el cifrado. El otro usuario ha sido notificado.");
+            } catch(e) {
+                console.error(e);
+                alert("Error enviando handshake. La conexión puede ser inestable.");
+            }
+        }
+
+        function resetKeyUI() {
+            isKeyActive = false;
+            const passInput = document.getElementById('crypto-password');
+            const btnSet = document.getElementById('btn-set-key');
+            const statusTxt = document.getElementById('key-status-text');
+
+            passInput.disabled = false;
+            passInput.value = "";
+            passInput.style.background = '#2a1b15';
+            
+            btnSet.disabled = false;
+            btnSet.innerText = "Establecer Clave";
+
+            statusTxt.innerText = "Esperando clave...";
+            statusTxt.style.color = "#aaa";
         }
 
         async function handleIncomingData(data) {
+            // Manejo del Handshake (Confirmación de clave)
+            if (data && typeof data === 'object' && data.type === 'HANDSHAKE') {
+                addSystemMessage("🔒 El otro usuario ha activado su clave de cifrado.");
+                // Podríamos forzar el foco en el campo de contraseña aquí
+                document.getElementById('crypto-password').focus();
+                return;
+            }
+
+            // Manejo de Mensajes Normales
             const password = document.getElementById('crypto-password').value;
+            
+            // Si llega algo encriptado pero no tenemos clave...
             if (data && typeof data === 'object' && data.encrypted) {
                 if (!password) { 
-                    addMessage("🔒 Mensaje cifrado. Ingresa clave.", 'locked'); 
+                    addMessage("🔒 Mensaje cifrado recibido. Ingresa tu clave y pulsa 'Establecer Clave'.", 'locked'); 
                     return; 
+                }
+                // Si tenemos clave en el campo, pero no la hemos "activado" con el botón...
+                if (!isKeyActive) {
+                    addMessage("⚠️ Tienes una clave escrita, pero no pulsaste 'Establecer Clave'. Hazlo para descifrar.", 'error');
+                    return;
                 }
                 try { 
                     const d = await decryptMessage(data, password); 
                     addMessage(d, 'received'); 
                 } catch (e) { 
-                    addMessage("🚫 Error descifrando (¿Clave incorrecta?)", 'error'); 
+                    addMessage("🚫 Error descifrando. ¿Clave incorrecta?", 'error'); 
                 }
             } else { 
+                // Mensaje sin cifrar
                 addMessage(data, 'received'); 
             }
         }
@@ -632,7 +693,7 @@
             document.getElementById('p2p-modal').showModal(); 
             if(myId) {
                 setPhoneStatus('idle');
-                logP2P("Listo para conectar. ID Persistente activo.");
+                logP2P("Listo para conectar.");
             } else {
                 logP2P("Esperando ID...");
             }
@@ -653,10 +714,16 @@
             const txt = input.value.trim();
             if (!txt || !conn || !conn.open) return;
             
+            // Verificamos que la clave esté activa si vamos a cifrar
             const password = document.getElementById('crypto-password').value;
+            
             let payload = txt;
             
             if (password) {
+                if (!isKeyActive) {
+                    alert("Para enviar cifrado, pulsa el botón 'Establecer Clave' primero.");
+                    return;
+                }
                 const encrypted = await encryptMessage(txt, password); 
                 if(encrypted) {
                     payload = encrypted; 
@@ -707,7 +774,7 @@
         function addSystemMessage(txt) {
             const w = document.getElementById('chat-window');
             const d = document.createElement('div');
-            d.style.cssText = "text-align:center;color:#aaa;font-size:0.8rem;margin:10px 0;";
+            d.className = 'msg-system';
             d.innerText = `--- ${txt} ---`;
             w.appendChild(d); w.scrollTop = w.scrollHeight;
         }
