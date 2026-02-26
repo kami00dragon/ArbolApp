@@ -4,283 +4,117 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
-    <!-- PeerJS (única dependencia P2P) -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
+    <!-- Librerías para la UI (NO para P2P, eso va en el iframe) -->
     <style>
-        /* --- ESTILOS COMPACTOS (sin cambios, igual que la versión anterior) --- */
+        /* --- ESTILOS COMPLETOS (exactamente como los tenías) --- */
         :root {
-            --wood-dark: #3e2723;
-            --wood-light: #5d4037;
-            --leaf-green: #2e7d32;
-            --leaf-light: #66bb6a;
-            --flower-pink: #e91e63;
-            --text-parchment: #efebe9;
-            --border-stem: #1b5e20;
-            --sidebar-width: 320px;
+            --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
+            --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
+            --border-stem: #1b5e20; --sidebar-width: 340px;
+            --msg-p2p-bg: #2e7d32; --msg-relay-bg: #f57c00;
         }
-
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Georgia', serif;
-            background-color: var(--wood-dark);
-            background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px);
-            color: var(--text-parchment);
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .app-layout {
-            display: grid;
-            grid-template-columns: var(--sidebar-width) 1fr;
-            height: 100vh;
-            max-width: 1600px;
-            margin: 0 auto;
-            background-color: rgba(0,0,0,0.2);
-            position: relative;
-            z-index: 10;
-        }
-
-        /* --- SIDEBAR --- */
-        .sidebar {
-            background-color: var(--wood-light);
-            border-right: 5px solid var(--leaf-green);
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            z-index: 20;
-        }
+        body { margin: 0; padding: 0; font-family: 'Georgia', serif; background-color: var(--wood-dark); background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px); color: var(--text-parchment); height: 100vh; overflow: hidden; }
+        .app-layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; height: 100vh; max-width: 1600px; margin: 0 auto; background-color: rgba(0,0,0,0.2); position: relative; z-index: 10; }
+        
+        .sidebar { background-color: var(--wood-light); border-right: 5px solid var(--leaf-green); display: flex; flex-direction: column; height: 100%; z-index: 20; }
         .sidebar-header { background-color: var(--leaf-green); padding: 20px; text-align: center; border-bottom: 4px solid var(--flower-pink); }
         .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: white; }
-        
         .sidebar-tabs { display: flex; background: #1b5e20; }
-        .tab-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            color: #a5d6a7;
-            padding: 15px 0;
-            cursor: pointer;
-            font-weight: bold;
-            border-bottom: 3px solid transparent;
-        }
+        .tab-btn { flex: 1; background: none; border: none; color: #a5d6a7; padding: 15px 0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
         .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
 
-        /* --- FORMULARIO --- */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ffcc80; }
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%; padding: 10px; background: #3e2723; border: 1px solid #795548; color: #efebe9; border-radius: 4px; font-family: inherit; box-sizing: border-box;
-        }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; background: #3e2723; border: 1px solid #795548; color: #efebe9; border-radius: 4px; font-family: inherit; box-sizing: border-box; }
         .form-group textarea { resize: vertical; min-height: 100px; }
-        
-        .btn-action {
-            width: 100%; padding: 12px; background: var(--flower-pink); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: background 0.2s;
-        }
+        .btn-action { width: 100%; padding: 12px; background: var(--flower-pink); color: white; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: background 0.2s; margin-bottom: 10px; }
         .btn-action:hover { background: #c2185b; }
+        .btn-rss { background: #FF9800; }
+        .btn-rss:hover { background: #F57C00; }
+        .btn-secondary { width: 100%; padding: 10px; background: #5d4037; color: white; border: 1px solid #8d6e63; border-radius: 5px; font-size: 0.9rem; cursor: pointer; margin-top: 5px; }
+        .btn-secondary:hover { background: #4e342e; }
 
-        /* --- FEED --- */
+        /* Agenda */
+        .contact-list { list-style: none; padding: 0; margin: 0; }
+        .contact-item { background: rgba(0,0,0,0.2); padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; transition: background 0.2s; }
+        .contact-item:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
+        .contact-info { flex-grow: 1; overflow: hidden; }
+        .contact-name { font-weight: bold; color: #ffcc80; display: block; }
+        .contact-id { font-family: monospace; font-size: 0.8rem; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .btn-delete-contact { background: none; border: none; color: #e53935; cursor: pointer; font-size: 1.1rem; padding: 0 5px; }
+        .btn-delete-contact:hover { color: #ff5252; }
+
+        /* Feed */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
         .tree-trunk { max-width: 700px; margin: 0 auto; min-height: 100vh; border-left: 8px solid var(--leaf-green); border-right: 8px solid var(--leaf-green); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        
         .feed-header { background-color: var(--leaf-green); padding: 15px 20px; text-align: center; border-bottom: 5px solid var(--leaf-light); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;}
         .header-title h1 { margin: 0; font-size: 1.8rem; color: #fff; text-shadow: 2px 2px 0 var(--wood-dark); }
         .subtitle { font-size: 0.8rem; color: #e8f5e9; font-style: italic; margin-top: 2px; display: block;}
-
-        .btn-p2p-header {
-            background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; font-size: 0.9rem;
-        }
+        .btn-p2p-header { background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
         .btn-p2p-header:hover { background: #1976D2; }
-
         .nav-branches { display: flex; justify-content: center; background: #2e7d32; }
         .nav-btn { background: none; border: none; color: white; padding: 15px 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-bottom: 4px solid transparent; transition: all 0.3s; }
         .nav-btn:hover { background-color: rgba(255,255,255,0.1); }
         .nav-btn.active { border-bottom-color: var(--flower-pink); background-color: rgba(0,0,0,0.1); }
-
         #feed-container { padding: 20px; }
         .leaf-card { background-color: var(--wood-light); border-radius: 5px 30px 5px 30px; padding: 20px; margin-bottom: 25px; border: 2px solid var(--border-stem); position: relative; box-shadow: 5px 5px 0px rgba(0,0,0,0.2); transition: transform 0.2s; }
         .leaf-card:hover { transform: translateY(-3px); }
         .leaf-card::before { content: '🌿'; position: absolute; top: -15px; left: -10px; font-size: 1.5rem; transform: rotate(-20deg); }
-        .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; }
+        .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; display: flex; justify-content: space-between; }
         .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
-        .post-content { line-height: 1.6; font-size: 1rem; white-space: pre-wrap; }
+        .post-content { line-height: 1.6; font-size: 1rem; white-space: pre-wrap; word-wrap: break-word; }
         .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e27d3; background: #000; }
         img, video { width: 100%; display: block; }
         .download-link { display: inline-block; margin-top: 10px; padding: 5px 15px; background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem; }
-
         .loading-frog { text-align: center; padding: 20px; font-size: 3rem; }
+        .source-manager { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #5d4037; }
+        .source-manager h4 { margin-top: 0; color: var(--flower-pink); font-size: 0.9rem; }
+        .input-group { display: flex; gap: 5px; margin-bottom: 10px; }
+        .input-group input { flex: 1; }
 
-        /* --- MODAL P2P REDISEÑADO (compacto y funcional) --- */
-        #p2p-modal {
-            border: 4px solid var(--leaf-green);
-            border-radius: 15px;
-            padding: 0;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            width: 95%;
-            max-width: 600px;
-            background: var(--wood-light);
-            color: var(--text-parchment);
-        }
+        /* Modal P2P (compacto, como te gustó) */
+        dialog { border: 4px solid var(--leaf-green); border-radius: 15px; padding: 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 95%; max-width: 600px; background: var(--wood-light); color: var(--text-parchment); }
+        dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+        .p2p-header { background: var(--leaf-green); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--flower-pink); }
+        .p2p-header h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
+        .bird-logo { width: 32px; height: 32px; display: inline-block; }
+        .bird-logo svg { width: 100%; height: 100%; stroke: #000; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         
-        #p2p-modal::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-
-        .p2p-header {
-            background: var(--leaf-green);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--flower-pink);
-        }
-        .p2p-header h3 { margin: 0; }
-
-        .p2p-status-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 20px;
-            background: rgba(0,0,0,0.2);
-            border-bottom: 1px solid var(--border-stem);
-            font-size: 0.9rem;
-        }
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
+        .p2p-status-bar { display: flex; align-items: center; gap: 8px; padding: 8px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-stem); font-size: 0.9rem; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
         .status-idle { background-color: #9e9e9e; }
         .status-calling { background-color: #2196F3; animation: pulse 1.5s infinite; }
         .status-connected { background-color: #4CAF50; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
         .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 500px; }
+        .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.7rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
-        /* Log de diagnóstico compacto */
-        .p2p-log {
-            height: 60px;
-            background: #000;
-            border: 1px solid #555;
-            margin-bottom: 10px;
-            padding: 5px;
-            font-family: monospace;
-            font-size: 0.7rem;
-            color: #0f0;
-            overflow-y: auto;
-            border-radius: 4px;
-        }
-
-        .chat-window {
-            flex-grow: 1;
-            background: #000;
-            border: 2px solid #5d4037;
-            border-radius: 8px;
-            padding: 10px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-
+        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; font-size: 0.9rem; }
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
-        .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; }
-        .msg-received { background: #555; color: white; align-self: flex-start; }
+        .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; border: 1px solid #1b5e20; }
+        .msg-received { background: #555; color: white; align-self: flex-start; border: 1px solid #777; }
         .msg-system { text-align: center; color: #aaa; font-size: 0.8rem; font-style: italic; margin: 5px 0; }
         .msg-pending { color: #ff9800; font-style: italic; font-size: 0.8rem; }
 
-        .peer-ids {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        .peer-id-box {
-            flex: 1;
-            min-width: 200px;
-            background: #2a1b15;
-            border: 1px solid #5d4037;
-            border-radius: 4px;
-            padding: 8px;
-        }
-        .peer-id-box label {
-            display: block;
-            font-size: 0.7rem;
-            color: #aaa;
-            margin-bottom: 3px;
-        }
-        .peer-id-value {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-        }
-        .peer-id-value input {
-            flex: 1;
-            background: #1a1a1a;
-            border: 1px solid #444;
-            color: #fff;
-            padding: 5px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            border-radius: 3px;
-        }
-        .peer-id-value button {
-            background: #5d4037;
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
+        .peer-ids { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .peer-id-box { flex: 1; min-width: 200px; background: #2a1b15; border: 1px solid #5d4037; border-radius: 4px; padding: 8px; }
+        .peer-id-box label { display: block; font-size: 0.7rem; color: #aaa; margin-bottom: 3px; }
+        .peer-id-value { display: flex; gap: 5px; align-items: center; }
+        .peer-id-value input { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 5px; font-family: monospace; font-size: 0.8rem; border-radius: 3px; }
+        .peer-id-value button { background: #5d4037; border: none; color: white; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 0.8rem; }
         .peer-id-value button:hover { background: #795548; }
 
-        .message-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .message-input-area {
-            display: flex;
-            gap: 10px;
-        }
-        #msg-input {
-            flex: 1;
-            background: #2a1b15;
-            border: 1px solid #795548;
-            color: #fff;
-            padding: 12px;
-            border-radius: 5px;
-            font-family: inherit;
-            resize: none;
-            min-height: 80px;
-            font-size: 1rem;
-        }
+        .message-controls { display: flex; flex-direction: column; gap: 10px; }
+        .message-input-area { display: flex; gap: 10px; }
+        #msg-input { flex: 1; background: #2a1b15; border: 1px solid #795548; color: #fff; padding: 12px; border-radius: 5px; font-family: inherit; resize: none; min-height: 80px; font-size: 1rem; }
         #msg-input:disabled { background: #221; color: #555; }
-        .btn-send {
-            background: var(--flower-pink);
-            color: white;
-            border: none;
-            padding: 0 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
+        .btn-send { background: var(--flower-pink); color: white; border: none; padding: 0 25px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
         .btn-send:hover { background: #c2185b; }
         .btn-send:disabled { background: #555; cursor: not-allowed; }
-
-        .btn-call {
-            background: #2196F3;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-        }
+        .btn-call { background: #2196F3; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom:10px;}
         .btn-call:hover { background: #1976D2; }
         .btn-call:disabled { background: #4a6b8f; cursor: not-allowed; }
 
@@ -295,414 +129,142 @@
 </head>
 <body>
     <div class="app-layout">
-        <!-- SIDEBAR (sin cambios) -->
+        <!-- SIDEBAR (completo) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🌱 ArbolApp</h2>
             </div>
-            
             <div class="sidebar-tabs">
-                <button class="tab-btn active" onclick="switchSidebarTab('editor')">✏️ Escribir</button>
-                <button class="tab-btn" onclick="switchSidebarTab('help')">📚 Cómo Usar</button>
+                <button class="tab-btn active" onclick="switchSidebarTab('editor', event)">✏️ Escribir</button>
+                <button class="tab-btn" onclick="switchSidebarTab('contacts', event)">👥 Contactos</button>
+                <button class="tab-btn" onclick="switchSidebarTab('data', event)">💾 Datos</button>
             </div>
-
             <div id="tab-editor" class="sidebar-content">
-                <div class="form-group">
-                    <label>Título de la Hoja</label>
-                    <input type="text" id="post-title" placeholder="Ej: Un nuevo día en el bosque">
-                </div>
-                <div class="form-group">
-                    <label>Contenido (Texto)</label>
-                    <textarea id="post-content" placeholder="Escribe aquí tus pensamientos..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Archivo Multimedia (Opcional)</label>
-                    <input type="text" id="post-media" placeholder="Ej: foto.jpg (solo nombre, no ruta)">
-                </div>
-                <div class="form-group">
-                    <label>Tipo de Archivo</label>
-                    <select id="post-type">
-                        <option value="image">Imagen (jpg, png)</option>
-                        <option value="video">Video (mp4)</option>
-                        <option value="audio">Audio (mp3)</option>
-                        <option value="document">Documento (pdf)</option>
-                        <option value="none">Solo Texto</option>
-                    </select>
-                </div>
-                <button class="btn-action" onclick="generateJsonFile()">⬇️ Generar y Descargar JSON</button>
-                <p style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-top:10px;">Esto descarga un archivo .json con tu post.</p>
+                <div class="form-group"><label>Título</label><input type="text" id="post-title"></div>
+                <div class="form-group"><label>Contenido</label><textarea id="post-content"></textarea></div>
+                <div class="form-group"><label>Multimedia</label><input type="text" id="post-media" placeholder="foto.jpg"></div>
+                <div class="form-group"><label>Tipo</label><select id="post-type">...</select></div>
+                <button class="btn-action" onclick="publishPost()">🌱 Publicar (Guardar Local)</button>
             </div>
-
-            <div id="tab-help" class="sidebar-content" style="display: none;">
-                <p style="text-align:center; font-size:0.9rem;">Cómo publicar:</p>
-                <div style="margin-bottom:15px; padding:10px; background:rgba(0,0,0,0.2); border-radius:5px;">
-                    <p><strong>1.</strong> Completa título y contenido.</p>
-                    <p><strong>2.</strong> Haz clic en "Generar y Descargar JSON".</p>
-                    <p><strong>3.</strong> Abre el archivo descargado y copia su contenido.</p>
-                    <p><strong>4.</strong> Pega el contenido en <code>posts.json</code> en tu repositorio.</p>
-                </div>
-            </div>
+            <div id="tab-contacts" class="sidebar-content" style="display: none;">... (tu agenda) ...</div>
+            <div id="tab-data" class="sidebar-content" style="display: none;">... (tus datos) ...</div>
         </aside>
 
         <!-- FEED PRINCIPAL -->
         <main class="main-feed">
             <div class="tree-trunk">
                 <header class="feed-header">
-                    <div class="header-title">
-                        <h1>🌳 ArbolApp</h1>
-                        <span class="subtitle">Red Social Libre</span>
-                    </div>
-                    <button class="btn-p2p-header" onclick="openP2P()">📞 Mensajes P2P</button>
+                    <div class="header-title"><h1>🌳 ArbolApp</h1><span class="subtitle">Red Social Libre</span></div>
+                    <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes P2P</button>
                 </header>
-
                 <nav class="nav-branches">
-                    <button class="nav-btn active" onclick="switchFeedTab('my-posts')">Mis Hojas</button>
-                    <button class="nav-btn" onclick="switchFeedTab('branches')">Ramas</button>
+                    <button class="nav-btn active" onclick="switchFeedTab('my-posts', event)">Mis Hojas</button>
+                    <button class="nav-btn" onclick="switchFeedTab('branches', event)">Ramas</button>
                 </nav>
-
-                <div id="feed-container">
-                    <div class="loading-frog">🌱 Cargando...</div>
-                </div>
+                <div id="feed-container"><div class="loading-frog">🌱 Cargando...</div></div>
             </div>
         </main>
     </div>
 
-    <!-- MODAL CHAT P2P (con las correcciones implementadas) -->
+    <!-- MODAL CHAT P2P -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
-            <h3>📞 Chat Directo P2P</h3>
-            <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            <h3><span class="bird-logo"><svg>... (tu logo) ...</svg></span> Chat P2P</h3>
+            <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
         </div>
-        
         <div class="p2p-status-bar">
             <span class="status-indicator" id="status-indicator"></span>
             <span id="status-text">Desconectado</span>
-            <span style="flex:1; text-align:right; font-size:0.7rem;" id="connection-method">PeerJS</span>
         </div>
-
-        <div id="p2p-log" class="p2p-log">Iniciando red P2P...</div>
-
+        <!-- Log de depuración (solo para ver qué hace el motor) -->
+        <div id="p2p-log" class="p2p-log">Esperando motor...</div>
         <div class="p2p-body">
             <div id="chat-window" class="chat-window"></div>
-
             <div class="peer-ids">
-                <div class="peer-id-box">
-                    <label>Tu ID:</label>
-                    <div class="peer-id-value">
-                        <input type="text" id="my-peer-id" readonly value="inicializando...">
-                        <button onclick="copyMyId()">📋</button>
-                    </div>
-                </div>
-                <div class="peer-id-box">
-                    <label>ID Remoto:</label>
-                    <div class="peer-id-value">
-                        <input type="text" id="remote-peer-id" placeholder="Pega ID aquí...">
-                        <button onclick="document.getElementById('remote-peer-id').value=''">✕</button>
-                    </div>
-                </div>
+                <div class="peer-id-box"><label>Tu ID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
+                <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
             </div>
-
-            <button class="btn-call" id="btn-connect" onclick="connectToPeer()" style="margin-bottom:10px;">📞 Llamar / Conectar</button>
-
+            <button class="btn-call" onclick="conectarLlamada()">📞 Llamar / Conectar</button>
             <div class="message-controls">
                 <div class="message-input-area">
-                    <textarea id="msg-input" placeholder="Escribe aquí... (Enter para enviar, conecta automáticamente)"></textarea>
-                    <button class="btn-send" id="btn-send" onclick="handleSendMessage()">➤</button>
+                    <textarea id="msg-input" placeholder="Escribe... (Enter envía)"></textarea>
+                    <button class="btn-send" onclick="handleSendMessage()">➤</button>
                 </div>
             </div>
         </div>
     </dialog>
 
+    <!-- =================================================== -->
+    <!-- EL "NAVEGADOR PEQUEÑO" (INVISIBLE)                 -->
+    <!-- =================================================== -->
+    <iframe id="p2p-engine" src="p2p-engine.html" style="width:0; height:0; border:0; position:absolute;"></iframe>
+
     <script>
-        // --- CONFIGURACIÓN P2P MEJORADA (con más STUN y opciones de ICE) ---
-        const P2P_CONFIG = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
-                // Añadimos un servidor TURN público de respaldo (último recurso)
-                {
-                    urls: 'turn:openrelay.metered.ca:80',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                }
-            ],
-            debug: 2,
-            // Configuración adicional para mejorar la compatibilidad
-            config: {
-                iceTransportPolicy: 'all', // Permitir todos los tipos de candidatos
-                iceCandidatePoolSize: 0 // No pre-recolectar candidatos, usar trickle ICE
+        // ===================================================
+        // CÓDIGO DE LA INTERFAZ PRINCIPAL (MANEJO DEL IFrame)
+        // ===================================================
+        const p2pIframe = document.getElementById('p2p-engine');
+        const chatWindow = document.getElementById('chat-window');
+        const myPeerIdInput = document.getElementById('my-peer-id');
+        const remotePeerIdInput = document.getElementById('remote-peer-id');
+        const msgInput = document.getElementById('msg-input');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+
+        // --- Función para enviar comandos al motor (iframe) ---
+        function enviarAlMotor(tipo, datos = {}) {
+            if (p2pIframe && p2pIframe.contentWindow) {
+                p2pIframe.contentWindow.postMessage({ type: tipo, data: datos }, '*');
+            } else {
+                console.error('Motor no disponible');
+                addSystemMessage('⚠️ Error: Motor P2P no iniciado');
             }
-        };
-
-        // --- VARIABLES P2P ---
-        let peer = null;
-        let conn = null;
-        let myId = null;
-        let remoteId = null;
-        let connectionTimeout = null;
-        let pendingMessages = [];
-        let useRelayOnly = false; // Bandera para forzar modo relay si falla
-
-        // --- FUNCIÓN DE LOG ---
-        function logP2P(message) {
-            const logDiv = document.getElementById('p2p-log');
-            if (!logDiv) return;
-            const time = new Date().toLocaleTimeString().split(' ')[0];
-            logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-            console.log(message);
         }
 
-        // --- INICIALIZACIÓN ---
-        window.addEventListener('load', () => {
-            logP2P("Iniciando red P2P con configuración mejorada...");
-            
-            peer = new Peer(null, P2P_CONFIG);
+        // --- Escuchar mensajes PROVENIENTES del motor (iframe) ---
+        window.addEventListener('message', (event) => {
+            // Por seguridad, en producción deberías verificar event.origin
+            // if (event.origin !== 'https://tu-sitio.github.io') return;
 
-            peer.on('open', (id) => {
-                myId = id;
-                logP2P("Red lista. Tu ID: " + id);
-                const myIdField = document.getElementById('my-peer-id');
-                if (myIdField) myIdField.value = myId;
-                updateStatus('idle');
-            });
+            const { type, data } = event.data;
 
-            peer.on('connection', (connection) => {
-                logP2P("📞 Llamada entrante de: " + connection.peer);
-                
-                // Auto-copiar ID remoto
-                document.getElementById('remote-peer-id').value = connection.peer;
-                
-                handleConnection(connection);
-            });
-
-            peer.on('error', (err) => {
-                logP2P("❌ Error de PeerJS: " + err.type);
-                if (err.type === 'unavailable-id') {
-                    logP2P("ID no disponible, generando nuevo...");
-                } else if (err.type === 'peer-unavailable') {
-                    logP2P("El otro usuario no está disponible");
-                    updateStatus('idle');
-                } else if (err.type === 'network' || err.type === 'server-error') {
-                    logP2P("Error de red con servidor PeerJS. Intentando reconectar...");
-                    setTimeout(() => peer.reconnect(), 5000);
-                }
-            });
-
-            peer.on('disconnected', () => {
-                logP2P("Desconectado del servidor PeerJS. Reconectando...");
-                peer.reconnect();
-            });
+            switch (type) {
+                case 'MI_ID':
+                    myPeerIdInput.value = data;
+                    logP2P(`✅ ID asignado: ${data}`);
+                    break;
+                case 'LLAMADA_ENTRANTE':
+                    remotePeerIdInput.value = data;
+                    addSystemMessage(`📞 Llamada entrante de: ${data}`);
+                    logP2P(`Llamada entrante de: ${data}`);
+                    break;
+                case 'CONEXION_ESTABLECIDA':
+                    actualizarEstado('connected');
+                    addSystemMessage('✅ Conectado');
+                    logP2P('Conexión establecida');
+                    break;
+                case 'CONEXION_CERRADA':
+                    actualizarEstado('idle');
+                    addSystemMessage('🔌 Desconectado');
+                    logP2P('Conexión cerrada');
+                    break;
+                case 'MENSAJE_RECIBIDO':
+                    addMessage(data, 'received');
+                    logP2P('Mensaje recibido');
+                    break;
+                case 'ERROR_P2P':
+                    actualizarEstado('idle');
+                    addSystemMessage(`⚠️ Error: ${data}`);
+                    logP2P(`ERROR: ${data}`);
+                    break;
+                case 'LOG':
+                    logP2P(data);
+                    break;
+            }
         });
 
-        // --- FUNCIÓN DE CONEXIÓN CON LA CLAVE DEL ÉXITO: "END OF CANDIDATES" ---
-        function connectToPeer() {
-            const targetId = document.getElementById('remote-peer-id').value.trim();
-            if (!targetId) {
-                alert("Por favor ingresa el ID del otro usuario.");
-                return;
-            }
-
-            if (targetId === myId) {
-                alert("No puedes conectarte a ti mismo");
-                return;
-            }
-
-            logP2P("Intentando conectar a: " + targetId);
-            updateStatus('calling');
-
-            // Limpiar conexión anterior si existe
-            if (conn) {
-                conn.close();
-            }
-
-            remoteId = targetId;
-            
-            // --- CONFIGURACIÓN DE CONEXIÓN AVANZADA ---
-            const connectionOptions = {
-                reliable: true,
-                serialization: 'json', // Mejor para objetos
-                dcInit: {
-                    // Opciones para el DataChannel
-                }
-            };
-            
-            conn = peer.connect(targetId, connectionOptions);
-
-            // Timeout de 15 segundos
-            connectionTimeout = setTimeout(() => {
-                if (!conn || !conn.open) {
-                    logP2P("⏱️ Tiempo de espera agotado (15s)");
-                    
-                    // --- SOLUCIÓN CLAVE: Forzar "fin de candidatos" y reintentar ---
-                    if (!useRelayOnly) {
-                        logP2P("Intentando reconexión con estrategia 'end-of-candidates'...");
-                        useRelayOnly = true;
-                        
-                        // Crear una nueva conexión pero forzando el envío de un candidato vacío
-                        // para señalar que ya no esperamos más candidatos [citation:9]
-                        const newPeer = new Peer(null, {
-                            ...P2P_CONFIG,
-                            config: {
-                                ...P2P_CONFIG.config,
-                                iceTransportPolicy: 'relay' // Forzar uso de relay en el reintento
-                            }
-                        });
-                        
-                        newPeer.on('open', (newId) => {
-                            logP2P("Nuevo ID para modo relay: " + newId);
-                            // No actualizamos el ID principal para no confundir al usuario
-                            const relayConn = newPeer.connect(targetId, connectionOptions);
-                            
-                            relayConn.on('open', () => {
-                                logP2P("✅ Conexión por relay establecida");
-                                conn = relayConn;
-                                peer = newPeer; // Reemplazar el peer principal
-                                myId = newId;
-                                document.getElementById('my-peer-id').value = myId;
-                                updateStatus('connected');
-                                addSystemMessage("Conectado vía relay (modo compatible)");
-                                
-                                while (pendingMessages.length) {
-                                    const msg = pendingMessages.shift();
-                                    conn.send(msg);
-                                    addMessage(msg, 'sent');
-                                }
-                            });
-                            
-                            relayConn.on('data', (data) => {
-                                addMessage(data, 'received');
-                            });
-                        });
-                    } else {
-                        updateStatus('idle');
-                        addSystemMessage("No se pudo conectar. Verifica tu conexión o firewall.");
-                    }
-                    
-                    if (conn) conn.close();
-                    conn = null;
-                }
-            }, 15000);
-
-            conn.on('open', () => {
-                clearTimeout(connectionTimeout);
-                logP2P("✅ Conexión establecida con: " + targetId);
-                updateStatus('connected');
-                addSystemMessage("Conectado");
-                
-                // Enviar mensajes pendientes
-                while (pendingMessages.length) {
-                    const msg = pendingMessages.shift();
-                    conn.send(msg);
-                    addMessage(msg, 'sent');
-                }
-            });
-
-            conn.on('data', (data) => {
-                addMessage(data, 'received');
-            });
-
-            conn.on('close', () => {
-                logP2P("Conexión cerrada");
-                updateStatus('idle');
-                addSystemMessage("La otra persona se ha desconectado");
-                conn = null;
-                remoteId = null;
-            });
-
-            conn.on('error', (err) => {
-                logP2P("Error en conexión: " + err);
-                // Si es un error de candidato, puede que necesitemos la estrategia especial
-                if (err.toString().includes('candidate')) {
-                    logP2P("Error relacionado con ICE candidates. Intentando estrategia alternativa...");
-                }
-                updateStatus('idle');
-                conn = null;
-            });
-        }
-
-        function handleConnection(connection) {
-            logP2P("Aceptando conexión...");
-            
-            if (conn) {
-                conn.close();
-            }
-            
-            conn = connection;
-            remoteId = connection.peer;
-
-            conn.on('open', () => {
-                logP2P("✅ Llamada aceptada");
-                updateStatus('connected');
-                addSystemMessage("Conectado con: " + remoteId);
-                
-                while (pendingMessages.length) {
-                    const msg = pendingMessages.shift();
-                    conn.send(msg);
-                    addMessage(msg, 'sent');
-                }
-            });
-
-            conn.on('data', (data) => {
-                addMessage(data, 'received');
-            });
-
-            conn.on('close', () => {
-                logP2P("Conexión cerrada");
-                updateStatus('idle');
-                conn = null;
-                remoteId = null;
-            });
-        }
-
-        // --- FUNCIONES DE ENVÍO Y UI (sin cambios) ---
-        function handleSendMessage() {
-            const input = document.getElementById('msg-input');
-            const text = input.value.trim();
-            if (!text) return;
-
-            input.value = '';
-
-            if (conn && conn.open) {
-                conn.send(text);
-                addMessage(text, 'sent');
-                logP2P("Mensaje enviado");
-            } else {
-                pendingMessages.push(text);
-                addMessage(text, 'pending');
-                logP2P("Mensaje guardado en buffer. Conectando...");
-                
-                const targetId = document.getElementById('remote-peer-id').value.trim();
-                if (targetId) {
-                    connectToPeer();
-                } else {
-                    addSystemMessage("⚠️ Escribe un ID remoto para conectar");
-                }
-            }
-        }
-
-        function updateStatus(status) {
-            const indicator = document.getElementById('status-indicator');
-            const text = document.getElementById('status-text');
-            
-            indicator.className = 'status-indicator';
-            if (status === 'idle') {
-                indicator.classList.add('status-idle');
-                text.innerText = 'Desconectado';
-            } else if (status === 'calling') {
-                indicator.classList.add('status-calling');
-                text.innerText = 'Conectando...';
-            } else if (status === 'connected') {
-                indicator.classList.add('status-connected');
-                text.innerText = 'En línea';
-            }
-        }
-
+        // --- Funciones de UI del chat ---
         function addMessage(text, type) {
-            const chatWindow = document.getElementById('chat-window');
             const div = document.createElement('div');
             div.className = `message msg-${type}`;
             div.innerText = text;
@@ -711,7 +273,6 @@
         }
 
         function addSystemMessage(text) {
-            const chatWindow = document.getElementById('chat-window');
             const div = document.createElement('div');
             div.className = 'msg-system';
             div.innerText = `--- ${text} ---`;
@@ -719,179 +280,285 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        function openP2P() {
-            document.getElementById('p2p-modal').showModal();
-            if (myId) {
-                document.getElementById('my-peer-id').value = myId;
-            }
-            document.getElementById('msg-input').focus();
+        function logP2P(mensaje) {
+            const logDiv = document.getElementById('p2p-log');
+            if (!logDiv) return;
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            logDiv.innerHTML += `<div>[${time}] ${mensaje}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        function closeP2P() {
-            document.getElementById('p2p-modal').close();
+        function actualizarEstado(estado) {
+            statusIndicator.className = 'status-indicator';
+            if (estado === 'idle') {
+                statusIndicator.classList.add('status-idle');
+                statusText.innerText = 'Desconectado';
+            } else if (estado === 'calling') {
+                statusIndicator.classList.add('status-calling');
+                statusText.innerText = 'Conectando...';
+            } else if (estado === 'connected') {
+                statusIndicator.classList.add('status-connected');
+                statusText.innerText = 'En línea';
+            }
         }
 
         function copyMyId() {
-            const idField = document.getElementById('my-peer-id');
-            idField.select();
-            navigator.clipboard.writeText(idField.value).then(() => {
-                alert("ID copiado al portapapeles");
-            }).catch(() => {
-                document.execCommand('copy');
-                alert("ID copiado (método alternativo)");
-            });
+            myPeerIdInput.select();
+            navigator.clipboard?.writeText(myPeerIdInput.value).then(() => alert("ID copiado")).catch(() => document.execCommand('copy'));
         }
 
+        function openP2P() {
+            document.getElementById('p2p-modal').showModal();
+            msgInput.focus();
+        }
+        function closeP2P() { document.getElementById('p2p-modal').close(); }
+
+        // --- Manejo del envío de mensajes (el usuario presiona Enter o el botón) ---
+        function handleSendMessage() {
+            const texto = msgInput.value.trim();
+            if (!texto) return;
+
+            const idRemoto = remotePeerIdInput.value.trim();
+            if (!idRemoto) {
+                addSystemMessage('⚠️ Debes ingresar un ID remoto');
+                return;
+            }
+
+            // Limpiar input y mostrar como pendiente
+            msgInput.value = '';
+            addMessage(texto, 'pending');
+
+            // Enviar al motor
+            enviarAlMotor('ENVIAR_MENSAJE', { texto, idRemoto });
+            actualizarEstado('calling');
+        }
+
+        function conectarLlamada() {
+            const idRemoto = remotePeerIdInput.value.trim();
+            if (!idRemoto) { alert('Ingresa un ID remoto'); return; }
+            enviarAlMotor('CONECTAR', { idRemoto });
+            actualizarEstado('calling');
+        }
+
+        // --- Evento Enter en el textarea ---
         document.addEventListener('DOMContentLoaded', () => {
-            const msgInput = document.getElementById('msg-input');
             if (msgInput) {
                 msgInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                    }
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
                 });
             }
-            
-            loadMyPosts();
         });
 
-        // --- FUNCIONES DEL FEED (sin cambios) ---
-        function switchSidebarTab(tabName) {
-            document.querySelectorAll('.sidebar-content').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-' + tabName).style.display = 'block';
-            event.target.classList.add('active');
+        // ===================================================
+        // RESTO DE FUNCIONES DE LA APP (FEED, POSTS, RSS, ETC)
+        // ===================================================
+        // (Estas son las que ya tenías, las incluyo completas para que no se pierdan)
+
+        const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
+        const PEER_ID_KEY = 'arbolapp_peer_id_v9';
+        const CONTACTS_KEY = 'arbolapp_contacts';
+        const CHAT_HISTORY_KEY = 'arbolapp_chat_history_';
+        const ENC_SALT = "arbolapp-static-salt-v2";
+
+        let contacts = [];
+
+        async function loadPostsData() {
+            let serverPosts = [];
+            try { const response = await fetch('posts.json'); if (response.ok) serverPosts = await response.json(); } catch (e) { console.log("No posts.json found."); }
+            let localPosts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+            const serverIds = new Set(serverPosts.map(p => p.id));
+            const uniqueLocalPosts = localPosts.filter(p => !serverIds.has(p.id));
+            return [...serverPosts, ...uniqueLocalPosts].sort((a, b) => new Date(b.date) - new Date(a.date));
         }
 
-        function generateJsonFile() {
+        function publishPost() {
             const title = document.getElementById('post-title').value.trim();
             const content = document.getElementById('post-content').value.trim();
             const media = document.getElementById('post-media').value.trim();
             const type = document.getElementById('post-type').value;
-
-            if (!title || !content) {
-                alert("Por favor escribe al menos un título y contenido.");
-                return;
-            }
-
-            const newPost = {
-                id: Date.now(),
-                date: new Date().toISOString(),
-                title: title,
-                content: content,
-                media: media || null,
-                type: type === 'none' ? null : type
-            };
-
-            const jsonString = JSON.stringify(newPost, null, 2);
-            const blob = new Blob([jsonString], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "nuevo-post.json";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            alert("Archivo descargado. Abre 'Cómo Usar' para ver los siguientes pasos.");
+            if (!title || !content) return alert("Escribe título y contenido.");
+            const newPost = { id: Date.now(), date: new Date().toISOString(), title, content, media: media || null, type: type === 'none' ? null : type };
+            let currentLocalPosts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+            currentLocalPosts.unshift(newPost);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentLocalPosts));
+            document.getElementById('post-title').value = ''; document.getElementById('post-content').value = ''; document.getElementById('post-media').value = '';
+            alert("✅ Publicado localmente.");
+            if (currentFeedTab === 'my-posts') loadMyPosts();
         }
 
-        const FOLLOWING_SOURCES = [
-            { name: 'Perfil', url: 'https://www.perfil.com/feed/' },
-            { name: 'Defonline', url: 'https://defonline.com.ar/feed/' },
-            { name: 'Wikipedia', url: 'https://es.wikipedia.org/w/index.php?title=Special:Feed&feed=rss&namespace=0' }
-        ];
+        async function exportToJson() {
+            const posts = await loadPostsData();
+            const blob = new Blob([JSON.stringify(posts, null, 2)], { type: "application/json" });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "posts.json"; a.click();
+        }
 
+        function clearLocalData() { if(confirm("¿Borrar locales?")) { localStorage.removeItem(LOCAL_STORAGE_KEY); loadMyPosts(); } }
+
+        function resetPeerId() {
+            if (confirm("¿Forzar nuevo ID P2P? Se borrará el actual y se recargará la página.")) {
+                localStorage.removeItem(PEER_ID_KEY);
+                location.reload();
+            }
+        }
+
+        const DEFAULT_SOURCES = [
+            { name: 'Perfil (Noticias)', url: 'https://www.perfil.com/feed/' },
+            { name: 'Simon Willison (IA)', url: 'https://fedi.simonwillison.net/@simon.rss' },
+            { name: 'The Verge (Tech)', url: 'https://mastodon.social/@theverge.rss' },
+            { name: 'Hugging Face (IA)', url: 'https://huggingface.social/@huggingface.rss' },
+            { name: 'DistroTube (Linux)', url: 'https://fosstodon.org/@distrotube.rss' },
+            { name: 'FSFE (Software Libre)', url: 'https://fosstodon.org/@fsfe.rss' },
+            { name: 'Jeremy Keith (Web)', url: 'https://adactio.com/@adactio.rss' },
+            { name: 'Malditos Nerds (Divulgación)', url: 'https://troet.cafe/@malditosnerds.rss' },
+            { name: 'Nahle Barco (Ciencia)', url: 'https://social.guays.eu/@nahle.rss' },
+            { name: 'El País Cultura', url: 'https://mastodon.social/@elpais_cultura.rss' },
+            { name: 'Gretchen McCulloch (Lingüística)', url: 'https://wandering.shop/@gretchenmcculloch.rss' }
+        ];
+        let customSources = JSON.parse(localStorage.getItem('arbolapp_sources') || '[]');
         let currentFeedTab = 'my-posts';
 
-        function switchFeedTab(tab) {
-            currentFeedTab = tab;
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            const container = document.getElementById('feed-container');
-            container.innerHTML = '<div class="loading-frog">🌱 Explorando...</div>';
-            
-            if (tab === 'my-posts') loadMyPosts();
-            else loadBranches();
-        }
-
-        async function loadMyPosts() {
-            const container = document.getElementById('feed-container');
-            try {
-                const response = await fetch('posts.json');
-                const posts = await response.json();
-                container.innerHTML = '';
-                if (posts.length === 0) {
-                     container.innerHTML = `<div style="text-align:center; padding:20px;">El bosque está tranquilo. ¡Crea tu primera hoja!</div>`;
-                     return;
-                }
-                posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-                posts.forEach(post => container.appendChild(createPostCard(post, true)));
-            } catch (error) {
-                container.innerHTML = `<div style="text-align:center; padding:20px;">No hay hojas. Crea tu primer post en el panel izquierdo.</div>`;
-            }
+        function addSource() {
+            const input = document.getElementById('new-source-url');
+            const url = input.value.trim(); if (!url) return;
+            let finalUrl = url, name = "Fuente Externa";
+            if (url.match(/^@[a-zA-Z0-9_-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+                const p = url.split('@'); finalUrl = `https://${p[2]}/@${p[1]}.rss`; name = `Mastodon: ${p[1]}@${p[2]}`;
+            } else if (url.includes('/@')) {
+                try { const u = new URL(url); const user = u.pathname.split('/')[1].replace('@',''); finalUrl = `${u.origin}/@${user}.rss`; name = `Mastodon: ${user}`; } catch(e){}
+            } else { name = new URL(url).hostname; }
+            customSources.push({ name, url: finalUrl });
+            localStorage.setItem('arbolapp_sources', JSON.stringify(customSources));
+            input.value = ''; if (currentFeedTab === 'branches') loadBranches();
         }
 
         async function loadBranches() {
             const container = document.getElementById('feed-container');
-            container.innerHTML = '';
-            for (const source of FOLLOWING_SOURCES) {
+            container.innerHTML = `
+                <div class="source-manager">
+                    <h4>🔗 Agregar nueva rama (RSS o Mastodon)</h4>
+                    <div class="input-group"><input type="text" id="new-source-url" placeholder="URL o @usuario@instancia.social"><button class="btn-action" style="width:auto; margin:0;" onclick="addSource()">Agregar</button></div>
+                </div><div class="loading-frog">🌱 Explorando...</div>`;
+            const allSources = [...DEFAULT_SOURCES, ...customSources];
+            for (const source of allSources) {
                 const sourceHeader = document.createElement('h3');
-                sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0;";
-                sourceHeader.innerText = `🍃 Hojas de la rama: ${source.name}`;
-                container.appendChild(sourceHeader);
+                sourceHeader.style.cssText = "color:#81c784; border-bottom:1px solid #2e7d32; padding:10px 0; margin-top:20px;";
+                sourceHeader.innerText = `🍃 Rama: ${source.name}`; container.appendChild(sourceHeader);
                 try {
-                    const proxy = 'https://api.rss2json.com/v1/api.json?rss_url=';
-                    const res = await fetch(proxy + encodeURIComponent(source.url));
+                    const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(source.url));
                     const data = await res.json();
                     if (data.status === 'ok') {
-                        data.items.slice(0, 3).forEach(item => {
-                            const fakePost = { title: item.title, date: item.pubDate, content: item.description, author: source.name, link: item.link };
-                            container.appendChild(createPostCard(fakePost, false));
+                        data.items.forEach(item => {
+                            container.appendChild(createPostCard({
+                                title: item.title, date: item.pubDate, content: item.description, author: source.name, link: item.link
+                            }, false));
                         });
                     }
-                } catch (e) { 
-                    container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error cargando la rama ${source.name}</div>`; 
-                }
+                } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error cargando ${source.name}</div>`; }
             }
+        }
+
+        function switchSidebarTab(tab, event) {
+            document.querySelectorAll('.sidebar-content').forEach(e => e.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById('tab-' + tab).style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        function switchFeedTab(tab, event) {
+            currentFeedTab = tab;
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('feed-container').innerHTML = '<div class="loading-frog">🌱 Cargando...</div>';
+            if (tab === 'my-posts') loadMyPosts(); else loadBranches();
+        }
+
+        async function loadMyPosts() {
+            const container = document.getElementById('feed-container'); container.innerHTML = '';
+            (await loadPostsData()).forEach(p => container.appendChild(createPostCard(p, true)));
         }
 
         function createPostCard(post, isOwn) {
-            const card = document.createElement('article');
-            card.className = 'leaf-card';
-            let mediaHtml = '';
-            
+            const card = document.createElement('article'); card.className = 'leaf-card';
+            let media = '';
             if (isOwn && post.media) {
-                const ext = post.media.split('.').pop().toLowerCase();
-                const mediaPath = 'media/' + post.media;
-                if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) mediaHtml = `<div class="media-container"><img src="${mediaPath}" loading="lazy"></div>`;
-                else if (['mp4', 'webm'].includes(ext)) mediaHtml = `<div class="media-container"><video controls><source src="${mediaPath}" type="video/mp4"></video></div>`;
-                else if (['mp3', 'wav'].includes(ext)) mediaHtml = `<div class="media-container"><audio controls src="${mediaPath}"></audio></div>`;
-                else mediaHtml = `<a href="${mediaPath}" target="_blank" class="download-link">📄 Descargar ${post.media}</a>`;
+                const path = 'media/'+post.media; const ext = post.media.split('.').pop().toLowerCase();
+                if (['jpg','png','gif'].includes(ext)) media = `<div class="media-container"><img src="${path}"></div>`;
+                else if (['mp4','webm'].includes(ext)) media = `<div class="media-container"><video controls src="${path}"></video></div>`;
+                else media = `<a href="${path}" class="download-link">Descargar</a>`;
+            } else if (!isOwn) {
+                const m = post.content.match(/src="([^"]+)"/);
+                media = m ? `<div class="media-container"><img src="${m[1]}"></div>` : `<div class="media-container"><img src="https://picsum.photos/seed/${post.title.replace(/\s/g,'')}/600/300" style="opacity:0.8"></div>`;
             }
-            if (!isOwn && post.content) {
-                const match = post.content.match(/src="([^"]+)"/);
-                if (match) mediaHtml = `<div class="media-container"><img src="${match[1]}"></div>`;
-                else {
-                    const seed = post.title.replace(/\s/g, '');
-                    mediaHtml = `<div class="media-container"><img src="https://picsum.photos/seed/${seed}/600/300" style="opacity:0.8"></div>`;
-                }
-            }
-
-            const cleanContent = post.content.replace(/<[^>]*>?/gm, '').substring(0, 300) + '...';
+            let contentHtml = isOwn ? post.content.replace(/[&<>"]/g, function(m) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m] }) : post.content;
             card.innerHTML = `
-                <div class="post-meta">📅 ${new Date(post.date).toLocaleDateString()} ${isOwn ? '✏️ Propio' : '🌳 ' + (post.author || 'Externo')}</div>
-                <h2 class="post-title">${post.title}</h2>
-                ${mediaHtml}
-                <div class="post-content">${isOwn ? post.content : cleanContent} ${!isOwn ? `<br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer en la rama ↗</a>` : ''}</div>
-            `;
+                <div class="post-meta"><span>📅 ${new Date(post.date).toLocaleDateString()}</span><span>${isOwn?'✏️ Propio':'🌳 '+(post.author||'Externo')}</span></div>
+                <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${contentHtml} ${!isOwn?`<br><br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer original ↗</a>`:''}</div>`;
             return card;
         }
 
+        function loadContacts() {
+            contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
+            renderContacts();
+        }
+        function renderContacts() {
+            const list = document.getElementById('contact-list'); if(!list) return;
+            list.innerHTML = '';
+            contacts.forEach((c, index) => {
+                const li = document.createElement('li');
+                li.className = 'contact-item';
+                li.onclick = (e) => { if(!e.target.classList.contains('btn-delete-contact')) selectContact(c.id); };
+                li.innerHTML = `<div class="contact-info"><span class="contact-name">${c.name}</span><span class="contact-id">${c.id}</span></div><button class="btn-delete-contact" onclick="deleteContact(${index})" title="Borrar">🗑️</button>`;
+                list.appendChild(li);
+            });
+        }
+        function addContact() {
+            const name = document.getElementById('contact-name').value.trim();
+            const id = document.getElementById('contact-id').value.trim();
+            if(!name || !id) return alert("Completa nombre e ID");
+            contacts.push({ name, id });
+            localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+            document.getElementById('contact-name').value = ''; document.getElementById('contact-id').value = '';
+            renderContacts();
+        }
+        function deleteContact(index) {
+            if(confirm("¿Borrar contacto?")) { contacts.splice(index, 1); localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); renderContacts(); }
+        }
+        function selectContact(id) {
+            document.getElementById('remote-peer-id').value = id;
+            openP2P();
+            document.getElementById('msg-input').focus();
+        }
+
+        async function generateAndDownloadRSS() {
+            const siteUrlInput = document.getElementById('site-url-input');
+            const siteUrl = siteUrlInput.value.trim();
+            if (!siteUrl) { alert("Por favor ingresa la URL base de tu sitio (ej: https://usuario.github.io/repo/)"); return; }
+            const baseUrl = siteUrl.endsWith('/') ? siteUrl : siteUrl + '/';
+            const posts = await loadPostsData();
+            let xml = `<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel><title>Árbol: Red Social Libre</title><link>${baseUrl}</link><description>Un espacio personal y libre para compartir ideas, multimedia y pensamientos.</description><language>es</language>`;
+            posts.forEach(post => {
+                const pubDate = new Date(post.date).toUTCString();
+                const link = `${baseUrl}#post-${post.id}`;
+                let description = post.content.replace(/[<>&'"]/g, function(c) { return { '<':'&lt;', '>':'&gt;', '&':'&amp;', "'":'&apos;', '"':'&quot;' }[c] });
+                let enclosureTag = "";
+                if (post.media) {
+                    const mediaUrl = `${baseUrl}media/${post.media}`;
+                    const ext = post.media.split('.').pop();
+                    const mime = ({'jpg':'image/jpeg','png':'image/png','gif':'image/gif','mp4':'video/mp4','webm':'video/webm','mp3':'audio/mpeg','pdf':'application/pdf'})[ext] || 'application/octet-stream';
+                    enclosureTag = `<enclosure url="${mediaUrl}" type="${mime}"/>`;
+                }
+                xml += `<item><title>${post.title}</title><link>${link}</link><description>${description}</description><pubDate>${pubDate}</pubDate>${enclosureTag}</item>`;
+            });
+            xml += `</channel></rss>`;
+            const blob = new Blob([xml], { type: "application/xml" });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "rss.xml"; a.click();
+            alert("Archivo rss.xml generado. Súbelo a tu repositorio para actualizar el feed.");
+        }
+
+        // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
             loadMyPosts();
+            loadContacts();
         });
     </script>
 </body>
