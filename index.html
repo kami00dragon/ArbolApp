@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
-    <!-- Librería PeerJS -->
+    <!-- PeerJS (única dependencia P2P) -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
     <style>
-        /* --- ESTILOS (incluyendo logo de pájaro) --- */
+        /* --- ESTILOS COMPACTOS (sin elementos que ocupen espacio innecesario) --- */
         :root {
             --wood-dark: #3e2723;
             --wood-light: #5d4037;
@@ -41,6 +42,7 @@
             z-index: 10;
         }
 
+        /* --- SIDEBAR (sin cambios, igual a tu versión funcional) --- */
         .sidebar {
             background-color: var(--wood-light);
             border-right: 5px solid var(--leaf-green);
@@ -66,6 +68,7 @@
         .tab-btn.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
         .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
 
+        /* --- FORMULARIO (sin cambios) --- */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #ffcc80; }
         .form-group input, .form-group textarea, .form-group select {
@@ -78,6 +81,7 @@
         }
         .btn-action:hover { background: #c2185b; }
 
+        /* --- FEED (sin cambios) --- */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
         .tree-trunk { max-width: 700px; margin: 0 auto; min-height: 100vh; border-left: 8px solid var(--leaf-green); border-right: 8px solid var(--leaf-green); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         
@@ -101,17 +105,14 @@
         .leaf-card::before { content: '🌿'; position: absolute; top: -15px; left: -10px; font-size: 1.5rem; transform: rotate(-20deg); }
         .post-meta { font-size: 0.8rem; color: #a5d6a7; margin-bottom: 10px; border-bottom: 1px dashed #795548; padding-bottom: 5px; }
         .post-title { font-size: 1.5rem; margin: 0 0 10px 0; color: #ffcc80; }
-        .post-content { line-height: 1.6; font-size: 1rem; }
+        .post-content { line-height: 1.6; font-size: 1rem; white-space: pre-wrap; }
         .media-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 3px solid #3e27d3; background: #000; }
         img, video { width: 100%; display: block; }
         .download-link { display: inline-block; margin-top: 10px; padding: 5px 15px; background: var(--flower-pink); color: white; text-decoration: none; border-radius: 15px; font-size: 0.9rem; }
 
-        .feed-instruction { margin-top: 30px; padding: 20px; border: 2px dashed var(--leaf-light); border-radius: 10px; text-align: center; background: rgba(46, 125, 50, 0.1); }
-        .feed-instruction h4 { margin-top: 0; color: var(--leaf-light); }
-        .feed-instruction code { background: #000; padding: 2px 5px; border-radius: 3px; color: #fff; }
         .loading-frog { text-align: center; padding: 20px; font-size: 3rem; }
 
-        /* --- MODAL P2P con logo de pájaro --- */
+        /* --- MODAL P2P REDISEÑADO (compacto y funcional) --- */
         #p2p-modal {
             border: 4px solid var(--leaf-green);
             border-radius: 15px;
@@ -133,61 +134,45 @@
             align-items: center;
             border-bottom: 2px solid var(--flower-pink);
         }
-        .p2p-header h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
-        .bird-logo { width: 32px; height: 32px; display: inline-block; }
-        .bird-logo svg { width: 100%; height: 100%; stroke: #000; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .p2p-header h3 { margin: 0; }
 
-        .p2p-status-area {
-            text-align: center;
-            padding: 10px 20px;
+        .p2p-status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
             background: rgba(0,0,0,0.2);
             border-bottom: 1px solid var(--border-stem);
+            font-size: 0.9rem;
         }
-
-        .p2p-instructions {
-            margin: 10px 20px;
-            padding: 15px;
-            background: rgba(46, 125, 50, 0.1);
-            border: 1px dashed var(--leaf-light);
-            border-radius: 8px;
-            font-size: 0.85rem;
-            color: #cfd8dc;
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
         }
-        .p2p-instructions h4 { margin: 0 0 10px 0; color: var(--leaf-light); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
-        .p2p-instructions ol { margin: 0; padding-left: 20px; }
-        .p2p-instructions li { margin-bottom: 5px; line-height: 1.3; }
-        .p2p-instructions b { color: #fff; }
+        .status-idle { background-color: #9e9e9e; }
+        .status-calling { background-color: #2196F3; animation: pulse 1.5s infinite; }
+        .status-connected { background-color: #4CAF50; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        .phone-icon { font-size: 3rem; display: inline-block; margin-bottom: 5px; }
-        .phone-blue { color: #2196F3; animation: ringing 1.5s infinite ease-in-out; }
-        .phone-green { color: #4CAF50; }
-        .phone-grey { color: #795548; }
-
-        @keyframes ringing {
-            0% { transform: rotate(0deg); }
-            10% { transform: rotate(-15deg); }
-            20% { transform: rotate(15deg); }
-            30% { transform: rotate(-15deg); }
-            40% { transform: rotate(15deg); }
-            50% { transform: rotate(0deg); }
-            100% { transform: rotate(0deg); }
-        }
-
-        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 450px; }
+        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 500px; }
         
+        /* Log de diagnóstico compacto */
         .p2p-log {
-            height: 80px;
+            height: 60px;
             background: #000;
             border: 1px solid #555;
             margin-bottom: 10px;
             padding: 5px;
             font-family: monospace;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #0f0;
             overflow-y: auto;
             border-radius: 4px;
         }
 
+        /* Área de chat con más espacio */
         .chat-window {
             flex-grow: 1;
             background: #000;
@@ -197,16 +182,110 @@
             overflow-y: auto;
             margin-bottom: 15px;
             font-family: monospace;
+            font-size: 0.9rem;
         }
 
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; }
         .msg-received { background: #555; color: white; align-self: flex-start; }
-        
-        .p2p-controls { display: flex; gap: 10px; flex-wrap: wrap; }
-        .btn-call { background: #2196F3; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; }
-        .btn-send { background: var(--flower-pink); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 0 0 50px; }
-        #msg-input { flex: 2; padding: 8px; background: #222; border: 1px solid #555; color: #fff; border-radius: 4px; }
+        .msg-system { text-align: center; color: #aaa; font-size: 0.8rem; font-style: italic; margin: 5px 0; }
+        .msg-pending { color: #ff9800; font-style: italic; font-size: 0.8rem; }
+
+        /* IDs en línea compacta */
+        .peer-ids {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .peer-id-box {
+            flex: 1;
+            min-width: 200px;
+            background: #2a1b15;
+            border: 1px solid #5d4037;
+            border-radius: 4px;
+            padding: 8px;
+        }
+        .peer-id-box label {
+            display: block;
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-bottom: 3px;
+        }
+        .peer-id-value {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .peer-id-value input {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 5px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            border-radius: 3px;
+        }
+        .peer-id-value button {
+            background: #5d4037;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .peer-id-value button:hover { background: #795548; }
+
+        /* Controles de mensaje compactos */
+        .message-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message-input-area {
+            display: flex;
+            gap: 10px;
+        }
+        #msg-input {
+            flex: 1;
+            background: #2a1b15;
+            border: 1px solid #795548;
+            color: #fff;
+            padding: 12px;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: none;
+            min-height: 80px;
+            font-size: 1rem;
+        }
+        #msg-input:disabled { background: #221; color: #555; }
+        .btn-send {
+            background: var(--flower-pink);
+            color: white;
+            border: none;
+            padding: 0 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .btn-send:hover { background: #c2185b; }
+        .btn-send:disabled { background: #555; cursor: not-allowed; }
+
+        .btn-call {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        .btn-call:hover { background: #1976D2; }
+        .btn-call:disabled { background: #4a6b8f; cursor: not-allowed; }
 
         @media (max-width: 900px) {
             .app-layout { grid-template-columns: 1fr; overflow-y: auto; }
@@ -218,10 +297,8 @@
     </style>
 </head>
 <body>
-
     <div class="app-layout">
-        
-        <!-- SIDEBAR -->
+        <!-- SIDEBAR (igual a versión funcional) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🌱 ArbolApp</h2>
@@ -232,23 +309,19 @@
                 <button class="tab-btn" onclick="switchSidebarTab('help')">📚 Cómo Usar</button>
             </div>
 
-            <!-- PESTAÑA: EDITOR -->
             <div id="tab-editor" class="sidebar-content">
                 <div class="form-group">
                     <label>Título de la Hoja</label>
                     <input type="text" id="post-title" placeholder="Ej: Un nuevo día en el bosque">
                 </div>
-
                 <div class="form-group">
                     <label>Contenido (Texto)</label>
                     <textarea id="post-content" placeholder="Escribe aquí tus pensamientos..."></textarea>
                 </div>
-
                 <div class="form-group">
                     <label>Archivo Multimedia (Opcional)</label>
                     <input type="text" id="post-media" placeholder="Ej: foto.jpg (solo nombre, no ruta)">
                 </div>
-
                 <div class="form-group">
                     <label>Tipo de Archivo</label>
                     <select id="post-type">
@@ -259,38 +332,18 @@
                         <option value="none">Solo Texto</option>
                     </select>
                 </div>
-
                 <button class="btn-action" onclick="generateJsonFile()">⬇️ Generar y Descargar JSON</button>
                 <p style="font-size:0.7rem; color:#a5d6a7; text-align:center; margin-top:10px;">Esto descarga un archivo .json con tu post.</p>
             </div>
 
-            <!-- PESTAÑA: INSTRUCCIONES -->
             <div id="tab-help" class="sidebar-content" style="display: none;">
-                <p style="text-align:center; font-size:0.9rem;">Sigue estos pasos para publicar:</p>
-                <div class="instruction-step">
-                    <span class="step-title">1. Descarga el código</span>
-                    <div class="visual-box"><span class="icon-file">📄</span> nuevo-post.json</div>
-                    <div class="arrow-down">↓</div>
-                    <small>Abre el archivo descargado con el Bloc de Notas.</small>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-title">2. Sube tu archivo multimedia</span>
-                    <div style="display:flex; align-items:center; justify-content:space-between;">
-                        <div class="visual-box" style="width:45%;"><span class="icon-file">🖼️</span> mi-foto.jpg</div>
-                        <div style="font-size:1.5rem;">➡️</div>
-                        <div class="visual-box" style="width:45%; background:#ffecb3;"><span class="icon-folder">📁</span> media/</div>
-                    </div>
-                    <small>Sube el archivo (foto/video) a la carpeta 'media' en tu repositorio.</small>
-                </div>
-                <div class="instruction-step">
-                    <span class="step-title">3. Pega en posts.json</span>
-                    <div class="visual-box"><span class="icon-folder">📁</span> posts.json</div>
-                    <div class="arrow-down">↓</div>
-                    <small>Abre <code>posts.json</code>. Busca el corchete de apertura <code>[</code> y pega ahí tu código. ¡Asegúrate de usar comas!</small>
-                </div>
-                <div class="instruction-step" style="border-color:var(--flower-pink);">
-                    <span class="step-title">4. Guarda y Sube</span>
-                    <p>Haz commit en GitHub. ¡Tu hoja nueva crecerá!</p>
+                <!-- Contenido de ayuda (resumido) -->
+                <p style="text-align:center; font-size:0.9rem;">Cómo publicar:</p>
+                <div style="margin-bottom:15px; padding:10px; background:rgba(0,0,0,0.2); border-radius:5px;">
+                    <p><strong>1.</strong> Completa título y contenido.</p>
+                    <p><strong>2.</strong> Haz clic en "Generar y Descargar JSON".</p>
+                    <p><strong>3.</strong> Abre el archivo descargado y copia su contenido.</p>
+                    <p><strong>4.</strong> Pega el contenido en <code>posts.json</code> en tu repositorio.</p>
                 </div>
             </div>
         </aside>
@@ -316,115 +369,95 @@
                 </div>
             </div>
         </main>
-
     </div>
 
-    <!-- MODAL CHAT P2P con logo de pájaro -->
+    <!-- MODAL CHAT P2P REDISEÑADO -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
-            <h3>
-                <span class="bird-logo">
-                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20,50 Q40,20 70,30 Q90,40 80,70 Q70,90 40,80 Q20,70 30,40 Q35,30 50,35" stroke="black" fill="none" stroke-width="5" stroke-linecap="round" />
-                        <path d="M55,38 L80,25" stroke="black" stroke-width="4" stroke-linecap="round" />
-                        <circle cx="45" cy="45" r="3" fill="black" />
-                    </svg>
-                </span>
-                Chat P2P
-            </h3>
+            <h3>📞 Chat Directo P2P</h3>
             <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
         
-        <div class="p2p-status-area">
-            <div id="status-icon" class="phone-icon phone-grey">📱</div>
-            <div id="status-text" style="margin-top:5px; font-weight:bold;">Desconectado</div>
+        <!-- Barra de estado compacta (sin icono grande) -->
+        <div class="p2p-status-bar">
+            <span class="status-indicator" id="status-indicator"></span>
+            <span id="status-text">Desconectado</span>
+            <span style="flex:1; text-align:right; font-size:0.7rem;" id="connection-method">PeerJS</span>
         </div>
 
-        <div class="p2p-instructions">
-            <h4>📞 Cómo conectar:</h4>
-            <ol>
-                <li>Copia tu <b>Tu ID</b> (casilla de arriba) y envíalo a tu amigo.</li>
-                <li>Pega el <b>ID de tu amigo</b> en la casilla de abajo.</li>
-                <li>Asegúrate de que ambos tengan esta ventana abierta.</li>
-                <li>Presiona <b>Llamar / Conectar</b>.</li>
-            </ol>
-            <small style="color:#aaa; display:block; margin-top:5px;">Si falla, revisa el log verde abajo.</small>
-        </div>
+        <!-- Log de diagnóstico compacto -->
+        <div id="p2p-log" class="p2p-log">Iniciando red P2P...</div>
 
         <div class="p2p-body">
-            <!-- LOG DE DIAGNÓSTICO -->
-            <div id="p2p-log" class="p2p-log">Esperando inicialización...</div>
-
-            <!-- Área de Chat -->
+            <!-- Área de chat -->
             <div id="chat-window" class="chat-window"></div>
 
-            <!-- Controles -->
-            <div style="margin-bottom: 10px;">
-                <label style="font-size:0.8rem; color:#aaa;">Tu ID:</label>
-                <div style="display:flex; gap:5px;">
-                    <input type="text" id="my-peer-id" readonly style="flex:1; background:#222; border:1px solid #555; color:#fff; padding:5px; font-family:monospace;">
-                    <button onclick="copyMyId()" style="cursor:pointer;">📋</button>
+            <!-- IDs en formato compacto -->
+            <div class="peer-ids">
+                <div class="peer-id-box">
+                    <label>Tu ID:</label>
+                    <div class="peer-id-value">
+                        <input type="text" id="my-peer-id" readonly value="inicializando...">
+                        <button onclick="copyMyId()">📋</button>
+                    </div>
+                </div>
+                <div class="peer-id-box">
+                    <label>ID Remoto:</label>
+                    <div class="peer-id-value">
+                        <input type="text" id="remote-peer-id" placeholder="Pega ID aquí...">
+                        <button onclick="document.getElementById('remote-peer-id').value=''">✕</button>
+                    </div>
                 </div>
             </div>
 
-            <div style="margin-bottom: 10px;">
-                <label style="font-size:0.8rem; color:#aaa;">Conectar con ID del otro:</label>
-                <input type="text" id="remote-peer-id" placeholder="Pega el ID aquí...">
-            </div>
+            <!-- Botón conectar manual (respaldo) -->
+            <button class="btn-call" id="btn-connect" onclick="connectToPeer()" style="margin-bottom:10px;">📞 Llamar / Conectar</button>
 
-            <div class="p2p-controls">
-                <button class="btn-call" id="btn-connect" onclick="connectToPeer()">📞 Llamar / Conectar</button>
-                <input type="text" id="msg-input" placeholder="Escribe un mensaje..." disabled>
-                <button class="btn-send" id="btn-send" onclick="sendMessage()" disabled>➤</button>
+            <!-- Controles de mensaje -->
+            <div class="message-controls">
+                <div class="message-input-area">
+                    <textarea id="msg-input" placeholder="Escribe aquí... (Enter para enviar, conecta automáticamente)"></textarea>
+                    <button class="btn-send" id="btn-send" onclick="handleSendMessage()">➤</button>
+                </div>
             </div>
         </div>
     </dialog>
 
     <script>
-        // --- CONFIGURACIÓN ROBUSTA DE PEERJS (equivalente a p2p-config.js perdido) ---
+        // --- CONFIGURACIÓN P2P (tu archivo p2p-config.js original) ---
         const P2P_CONFIG = {
-            // Múltiples servidores STUN para mayor probabilidad de éxito
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
-                { urls: 'stun:stun.ekiga.net' },
-                { urls: 'stun:stun.ideasip.com' },
-                { urls: 'stun:stun.schlund.de' },
-                // Servidor TURN público (limitado pero ayuda en redes restrictivas)
-                {
-                    urls: 'turn:openrelay.metered.ca:80',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                }
+                { url: 'stun:stun.l.google.com:19302' },
+                { url: 'stun:stun1.l.google.com:19302' },
+                { url: 'stun:stun2.l.google.com:19302' },
+                { url: 'stun:stun3.l.google.com:19302' },
+                { url: 'stun:stun4.l.google.com:19302' }
             ],
-            debug: 2 // Nivel de debug (0-3)
+            debug: 2
         };
 
         // --- VARIABLES P2P ---
         let peer = null;
         let conn = null;
         let myId = null;
+        let remoteId = null;
         let connectionTimeout = null;
+        let pendingMessages = []; // Buffer para mensajes escritos antes de conectar
 
-        // --- FUNCIÓN DE LOG (DIAGNÓSTICO) ---
+        // --- FUNCIÓN DE LOG ---
         function logP2P(message) {
             const logDiv = document.getElementById('p2p-log');
-            if (logDiv) {
-                const time = new Date().toLocaleTimeString().split(' ')[0];
-                logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
-                logDiv.scrollTop = logDiv.scrollHeight;
-            }
+            if (!logDiv) return;
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
             console.log(message);
         }
 
         // --- INICIALIZACIÓN ---
         window.addEventListener('load', () => {
-            logP2P("Iniciando red P2P con configuración robusta...");
-            logP2P("STUNs: " + P2P_CONFIG.iceServers.length);
-
+            logP2P("Iniciando red P2P con configuración mejorada...");
+            
             peer = new Peer(null, P2P_CONFIG);
 
             peer.on('open', (id) => {
@@ -432,85 +465,117 @@
                 logP2P("Red lista. Tu ID: " + id);
                 const myIdField = document.getElementById('my-peer-id');
                 if (myIdField) myIdField.value = myId;
+                updateStatus('idle');
             });
 
             peer.on('connection', (connection) => {
-                logP2P("Llamada entrante de: " + connection.peer);
-                // Aceptar automáticamente (como en la versión funcional)
+                logP2P("📞 Llamada entrante de: " + connection.peer);
+                
+                // --- CARACTERÍSTICA 1: Auto-copiar ID remoto ---
+                document.getElementById('remote-peer-id').value = connection.peer;
+                
                 handleConnection(connection);
-                // Notificar al usuario
-                if (document.visibilityState === 'visible') {
-                    alert("¡Llamada entrante! Conexión establecida.");
+                
+                // Notificación suave
+                if (document.visibilityState === 'visible' && !document.getElementById('p2p-modal').open) {
+                    // Si el modal está cerrado, mostramos alerta
+                    alert("¡Llamada entrante! Se ha copiado el ID automáticamente.");
                 }
             });
 
             peer.on('error', (err) => {
-                logP2P("Error de PeerJS: " + err.type);
-                if (err.type === 'network' || err.type === 'server-error') {
-                    alert("Error de red P2P: No se pudo conectar al servidor de señalización. Revisa tu conexión o intenta más tarde.");
-                } else {
-                    alert("Error P2P: " + err.type);
+                logP2P("❌ Error de PeerJS: " + err.type);
+                if (err.type === 'unavailable-id') {
+                    // ID conflictivo, se regenerará solo
+                    logP2P("ID no disponible, generando nuevo...");
+                } else if (err.type === 'peer-unavailable') {
+                    logP2P("El otro usuario no está disponible");
+                    updateStatus('idle');
                 }
             });
 
             peer.on('disconnected', () => {
-                logP2P("Desconectado del servidor. Intentando reconectar...");
+                logP2P("Desconectado del servidor PeerJS. Reconectando...");
                 peer.reconnect();
             });
         });
 
-        // --- FUNCIONES P2P ---
+        // --- CARACTERÍSTICA 2: Buffer de mensajes y envío con Enter ---
+        function handleSendMessage() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if (!text) return;
 
-        function openP2P() {
-            document.getElementById('p2p-modal').showModal();
-            if (myId) {
-                document.getElementById('my-peer-id').value = myId;
-                setPhoneStatus('idle');
+            // Limpiar input inmediatamente
+            input.value = '';
+
+            if (conn && conn.open) {
+                // Ya conectado: enviar directo
+                conn.send(text);
+                addMessage(text, 'sent');
+                logP2P("Mensaje enviado");
             } else {
-                document.getElementById('status-text').innerText = "Inicializando...";
+                // No conectado: guardar en buffer y conectar
+                pendingMessages.push(text);
+                addMessage(text, 'pending');
+                logP2P("Mensaje guardado en buffer. Conectando...");
+                
+                const targetId = document.getElementById('remote-peer-id').value.trim();
+                if (targetId) {
+                    connectToPeer();
+                } else {
+                    addSystemMessage("⚠️ Escribe un ID remoto para conectar");
+                }
             }
         }
 
-        function closeP2P() {
-            document.getElementById('p2p-modal').close();
-        }
-
-        function copyMyId() {
-            const idField = document.getElementById('my-peer-id');
-            idField.select();
-            document.execCommand('copy');
-            alert("ID copiado al portapapeles");
-        }
-
+        // --- FUNCIÓN DE CONEXIÓN MEJORADA (con timeout de 15s) ---
         function connectToPeer() {
-            const remoteId = document.getElementById('remote-peer-id').value.trim();
-            if (!remoteId) {
+            const targetId = document.getElementById('remote-peer-id').value.trim();
+            if (!targetId) {
                 alert("Por favor ingresa el ID del otro usuario.");
                 return;
             }
 
-            logP2P("Intentando conectar a: " + remoteId);
-            setPhoneStatus('calling');
+            if (targetId === myId) {
+                alert("No puedes conectarte a ti mismo");
+                return;
+            }
 
-            // Establecer conexión con reliable: true
-            conn = peer.connect(remoteId, { reliable: true });
+            logP2P("Intentando conectar a: " + targetId);
+            updateStatus('calling');
 
-            // Timeout de 15 segundos (como en la versión funcional)
+            // Limpiar conexión anterior si existe
+            if (conn) {
+                conn.close();
+            }
+
+            remoteId = targetId;
+            conn = peer.connect(targetId, { reliable: true });
+
+            // Timeout de 15 segundos (igual a tu versión funcional)
             connectionTimeout = setTimeout(() => {
                 if (!conn || !conn.open) {
-                    logP2P("Tiempo de espera agotado (Timeout). El otro usuario probablemente no tiene la página abierta o hay un firewall bloqueando.");
-                    setPhoneStatus('idle');
-                    alert("La conexión falló. Asegúrate de que ambos tengan la página abierta en este mismo momento y que ambos usen HTTPS (GitHub Pages).");
+                    logP2P("⏱️ Tiempo de espera agotado (15s)");
+                    updateStatus('idle');
+                    addSystemMessage("No se pudo conectar. Verifica que ambos tengan la página abierta.");
                     if (conn) conn.close();
+                    conn = null;
                 }
             }, 15000);
 
             conn.on('open', () => {
                 clearTimeout(connectionTimeout);
-                logP2P("Conexión establecida.");
-                setPhoneStatus('connected');
-                enableChat(true);
-                addSystemMessage("Conectado con éxito.");
+                logP2P("✅ Conexión establecida con: " + targetId);
+                updateStatus('connected');
+                addSystemMessage("Conectado");
+
+                // --- CARACTERÍSTICA 3: Enviar mensajes pendientes ---
+                while (pendingMessages.length) {
+                    const msg = pendingMessages.shift();
+                    conn.send(msg);
+                    addMessage(msg, 'sent');
+                }
             });
 
             conn.on('data', (data) => {
@@ -518,29 +583,42 @@
             });
 
             conn.on('close', () => {
-                logP2P("Conexión cerrada.");
-                setPhoneStatus('idle');
-                enableChat(false);
-                addSystemMessage("La otra persona se ha desconectado.");
+                logP2P("Conexión cerrada");
+                updateStatus('idle');
+                addSystemMessage("La otra persona se ha desconectado");
                 conn = null;
+                remoteId = null;
             });
 
             conn.on('error', (err) => {
-                logP2P("Error en la conexión: " + err.type);
-                setPhoneStatus('idle');
-                alert("Error de conexión: " + err.type);
+                logP2P("Error en conexión: " + err);
+                updateStatus('idle');
+                conn = null;
             });
         }
 
         function handleConnection(connection) {
             logP2P("Aceptando conexión...");
-            conn = connection;
             
+            // Si ya hay una conexión, cerrarla
+            if (conn) {
+                conn.close();
+            }
+            
+            conn = connection;
+            remoteId = connection.peer;
+
             conn.on('open', () => {
-                logP2P("Llamada aceptada.");
-                setPhoneStatus('connected');
-                enableChat(true);
-                addSystemMessage("Conectado.");
+                logP2P("✅ Llamada aceptada");
+                updateStatus('connected');
+                addSystemMessage("Conectado con: " + remoteId);
+                
+                // Enviar mensajes pendientes si los hay
+                while (pendingMessages.length) {
+                    const msg = pendingMessages.shift();
+                    conn.send(msg);
+                    addMessage(msg, 'sent');
+                }
             });
 
             conn.on('data', (data) => {
@@ -548,57 +626,28 @@
             });
 
             conn.on('close', () => {
-                logP2P("Desconexión.");
-                setPhoneStatus('idle');
-                enableChat(false);
+                logP2P("Conexión cerrada");
+                updateStatus('idle');
                 conn = null;
+                remoteId = null;
             });
         }
 
-        function sendMessage() {
-            const input = document.getElementById('msg-input');
-            const text = input.value.trim();
-            if (!text || !conn) return;
-            logP2P("Enviando mensaje...");
-            conn.send(text);
-            addMessage(text, 'sent');
-            input.value = '';
-        }
-
-        // --- UI HELPERS ---
-
-        function setPhoneStatus(status) {
-            const icon = document.getElementById('status-icon');
+        // --- FUNCIONES DE UI ---
+        function updateStatus(status) {
+            const indicator = document.getElementById('status-indicator');
             const text = document.getElementById('status-text');
+            
+            indicator.className = 'status-indicator';
             if (status === 'idle') {
-                icon.className = 'phone-icon phone-grey';
-                text.innerText = "Desconectado";
+                indicator.classList.add('status-idle');
+                text.innerText = 'Desconectado';
             } else if (status === 'calling') {
-                icon.className = 'phone-icon phone-blue';
-                text.innerText = "Conectando...";
+                indicator.classList.add('status-calling');
+                text.innerText = 'Conectando...';
             } else if (status === 'connected') {
-                icon.className = 'phone-icon phone-green';
-                text.innerText = "En línea";
-            }
-        }
-
-        function enableChat(enabled) {
-            const btnConnect = document.getElementById('btn-connect');
-            const inputMsg = document.getElementById('msg-input');
-            const btnSend = document.getElementById('btn-send');
-            if (enabled) {
-                btnConnect.disabled = true;
-                btnConnect.innerText = "Conectado";
-                btnConnect.style.background = "#4CAF50";
-                inputMsg.disabled = false;
-                btnSend.disabled = false;
-                inputMsg.focus();
-            } else {
-                btnConnect.disabled = false;
-                btnConnect.innerText = "📞 Llamar / Conectar";
-                btnConnect.style.background = "#2196F3";
-                inputMsg.disabled = true;
-                btnSend.disabled = true;
+                indicator.classList.add('status-connected');
+                text.innerText = 'En línea';
             }
         }
 
@@ -614,23 +663,52 @@
         function addSystemMessage(text) {
             const chatWindow = document.getElementById('chat-window');
             const div = document.createElement('div');
-            div.style.textAlign = 'center';
-            div.style.color = '#aaa';
-            div.style.fontSize = '0.8rem';
-            div.style.margin = '10px 0';
+            div.className = 'msg-system';
             div.innerText = `--- ${text} ---`;
             chatWindow.appendChild(div);
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        // Enviar con Enter
-        document.getElementById('msg-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                sendMessage();
+        function openP2P() {
+            document.getElementById('p2p-modal').showModal();
+            if (myId) {
+                document.getElementById('my-peer-id').value = myId;
             }
+            document.getElementById('msg-input').focus();
+        }
+
+        function closeP2P() {
+            document.getElementById('p2p-modal').close();
+        }
+
+        function copyMyId() {
+            const idField = document.getElementById('my-peer-id');
+            idField.select();
+            navigator.clipboard.writeText(idField.value).then(() => {
+                alert("ID copiado al portapapeles");
+            }).catch(() => {
+                document.execCommand('copy');
+                alert("ID copiado (método alternativo)");
+            });
+        }
+
+        // --- CARACTERÍSTICA 4: Enter para enviar (y conectar automáticamente) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const msgInput = document.getElementById('msg-input');
+            if (msgInput) {
+                msgInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                    }
+                });
+            }
+            
+            // Cargar feed inicial
+            loadMyPosts();
         });
 
-        // --- CÓDIGO EXISTENTE (SIDEBAR Y FEED) ---
+        // --- FUNCIONES DEL FEED (de tu versión funcional) ---
         function switchSidebarTab(tabName) {
             document.querySelectorAll('.sidebar-content').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -726,15 +804,10 @@
                             container.appendChild(createPostCard(fakePost, false));
                         });
                     }
-                } catch (e) { container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error cargando la rama ${source.name}</div>`; }
+                } catch (e) { 
+                    container.innerHTML += `<div style="color:#ef9a9a; padding:10px;">Error cargando la rama ${source.name}</div>`; 
+                }
             }
-            const instructionBox = document.createElement('div');
-            instructionBox.className = 'feed-instruction';
-            instructionBox.innerHTML = `
-                <h4>🌿 ¿Quieres agregar más Ramas?</h4>
-                <p style="font-size:0.9rem; color:#cfd8dc;">Para agregar más periódicos o blogs, abre el archivo <code>index.html</code> y busca la variable <code>FOLLOWING_SOURCES</code>.</p>
-            `;
-            container.appendChild(instructionBox);
         }
 
         function createPostCard(post, isOwn) {
@@ -769,7 +842,10 @@
             return card;
         }
 
-        document.addEventListener('DOMContentLoaded', () => loadMyPosts());
+        // Inicialización del feed
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMyPosts();
+        });
     </script>
 </body>
 </html>
