@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
     
+    <!-- Firebase SDK (cargado globalmente para todo el script) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
     <style>
         /* ========== TUS ESTILOS COMPLETOS (los mismos de la versión anterior) ========== */
         :root {
@@ -124,14 +128,14 @@
         .btn-call:disabled { background: #4a6b8f; cursor: not-allowed; }
 
         /* Contactos en modal */
-        .contact-list { list-style: none; padding: 0; margin: 10px 0; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 5px; }
-        .contact-item { background: rgba(0,0,0,0.2); padding: 8px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; }
-        .contact-item:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
-        .contact-info { flex-grow: 1; overflow: hidden; }
-        .contact-name { font-weight: bold; color: #ffcc80; display: block; }
-        .contact-id { font-family: monospace; font-size: 0.7rem; color: #aaa; }
-        .btn-delete-contact { background: none; border: none; color: #e53935; cursor: pointer; font-size: 1rem; padding: 0 5px; }
-        .btn-delete-contact:hover { color: #ff5252; }
+        .contact-list-modal { list-style: none; padding: 0; margin: 10px 0; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 5px; }
+        .contact-item-modal { background: rgba(0,0,0,0.2); padding: 8px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; }
+        .contact-item-modal:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
+        .contact-info-modal { flex-grow: 1; overflow: hidden; }
+        .contact-name-modal { font-weight: bold; color: #ffcc80; display: block; }
+        .contact-id-modal { font-family: monospace; font-size: 0.7rem; color: #aaa; }
+        .btn-delete-contact-modal { background: none; border: none; color: #e53935; cursor: pointer; font-size: 1rem; padding: 0 5px; }
+        .btn-delete-contact-modal:hover { color: #ff5252; }
         .add-contact { display: flex; gap: 5px; margin-top: 10px; }
         .add-contact input { flex: 1; background: #2a1b15; border: 1px solid #5d4037; color: #fff; padding: 8px; border-radius: 4px; }
 
@@ -205,13 +209,13 @@
                 <header class="feed-header">
                     <div class="header-title">
                         <h1>🌳 ArbolApp</h1>
-                        <span class="subtitle">Red Social Estática y Cifrada</span>
+                        <span class="subtitle">Red Social Estática</span>
                     </div>
-                    <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes P2P</button>
+                    <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes</button>
                 </header>
                 <nav class="nav-branches">
                     <button class="nav-btn active" onclick="switchFeedTab('my-posts', event)">Mis Hojas</button>
-                    <button class="nav-btn" onclick="switchFeedTab('branches', event)">Ramas (RSS/Mastodon)</button>
+                    <button class="nav-btn" onclick="switchFeedTab('branches', event)">Ramas (RSS)</button>
                 </nav>
                 <div id="feed-container">
                     <div class="loading-frog">🌱 Cargando...</div>
@@ -220,7 +224,7 @@
         </main>
     </div>
 
-    <!-- MODAL P2P (con pestañas Chat y Contactos) -->
+    <!-- MODAL P2P (Chat y Contactos) -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
             <h3>
@@ -231,7 +235,7 @@
                         <circle cx="45" cy="45" r="3" fill="black" />
                     </svg>
                 </span>
-                Comunicación
+                Mensajería
             </h3>
             <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
@@ -244,9 +248,9 @@
             <div class="p2p-status-bar">
                 <span class="status-indicator" id="status-indicator"></span>
                 <span id="status-text">Desconectado</span>
-                <span style="flex:1; text-align:right; font-size:0.7rem;" id="capa-actual">MQTT</span>
+                <span style="flex:1; text-align:right; font-size:0.7rem;" id="capa-actual">Firebase</span>
             </div>
-            <div id="p2p-log" class="p2p-log">Esperando motor...</div>
+            <div id="p2p-log" class="p2p-log">Iniciando motor...</div>
             <div class="p2p-body">
                 <div id="chat-window" class="chat-window"></div>
                 <div class="peer-ids">
@@ -269,23 +273,39 @@
         <div id="p2p-tab-contacts" class="p2p-tab-content hidden">
             <div style="padding: 15px;">
                 <h4 style="margin-top:0; color:var(--leaf-light);">👥 Mis Contactos</h4>
-                <ul id="contact-list-modal" class="contact-list"></ul>
+                <ul id="contact-list-modal" class="contact-list-modal"></ul>
                 <div class="add-contact">
                     <input type="text" id="contact-name-modal" placeholder="Nombre">
                     <input type="text" id="contact-id-modal" placeholder="ID">
                     <button class="btn-action" style="width:auto; padding:8px 15px;" onclick="addContactModal()">➕</button>
                 </div>
-                <p style="font-size:0.8rem; color:#aaa;">Haz clic en un contacto para copiar su ID al campo remoto.</p>
+                <p style="font-size:0.8rem; color:#aaa;">Haz clic en un contacto para copiar su ID.</p>
             </div>
         </div>
     </dialog>
 
-    <!-- IFRAME: MOTOR MQTT (con permisos mejorados) -->
-    <iframe id="p2p-engine" src="mqtt-engine.html" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" style="width:0; height:0; border:0; position:absolute;"></iframe>
-
     <script>
-        // ========== VARIABLES GLOBALES ==========
-        const p2pIframe = document.getElementById('p2p-engine');
+        // ========== CONFIGURACIÓN DE FIREBASE ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyDnnr8F3An8OAk8mJQTqC98180aUqC5dWI",
+            authDomain: "arbolapp-c0b50.firebaseapp.com",
+            databaseURL: "https://arbolapp-c0b50-default-rtdb.firebaseio.com",
+            projectId: "arbolapp-c0b50",
+            storageBucket: "arbolapp-c0b50.firebasestorage.app",
+            messagingSenderId: "151816184751",
+            appId: "1:151816184751:web:777e49d8ab78343af3455a"
+        };
+
+        // Inicializar Firebase (se hará más tarde con el ID)
+        let app = null;
+        let db = null;
+        let inboxRef = null;
+        let miId = null;
+        let idRemoto = null;
+        let bufferMensajes = [];
+        let escuchando = false;
+
+        // ========== VARIABLES GLOBALES UI ==========
         const chatWindow = document.getElementById('chat-window');
         const myPeerIdInput = document.getElementById('my-peer-id');
         const remotePeerIdInput = document.getElementById('remote-peer-id');
@@ -293,6 +313,7 @@
         const statusIndicator = document.getElementById('status-indicator');
         const statusText = document.getElementById('status-text');
         const capaActualSpan = document.getElementById('capa-actual');
+        const p2pLog = document.getElementById('p2p-log');
 
         const CONTACTS_KEY = 'arbolapp_contacts';
         let contacts = [];
@@ -315,75 +336,89 @@
             return id;
         }
 
-        // ========== FUNCIÓN REINICIAR ID ==========
-        function reiniciarId() {
-            if (confirm('¿Generar un nuevo ID? Esto reiniciará las conexiones actuales.')) {
-                const nuevoId = generarNuevoId();
-                localStorage.setItem(ID_KEY, nuevoId);
-                enviarAlMotor('REINICIAR_CON_ID', { id: nuevoId });
-            }
+        // ========== FUNCIÓN DE LOG ==========
+        function logP2P(mensaje) {
+            if (!p2pLog) return;
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            p2pLog.innerHTML += `<div>[${time}] ${mensaje}</div>`;
+            p2pLog.scrollTop = p2pLog.scrollHeight;
         }
 
-        // ========== COMUNICACIÓN CON EL IFRAME ==========
-        function enviarAlMotor(tipo, datos = {}) {
-            if (p2pIframe && p2pIframe.contentWindow) {
-                p2pIframe.contentWindow.postMessage({ type: tipo, data: datos }, '*');
-            } else {
-                console.error('Motor no disponible');
-                addSystemMessage('⚠️ Error: Motor no iniciado');
+        // ========== FUNCIONES DEL MOTOR FIREBASE ==========
+        function iniciarFirebase(id) {
+            miId = id;
+            logP2P(`🔑 ID: ${miId}`);
+            myPeerIdInput.value = miId;
+
+            if (app) {
+                app.delete(); // reiniciar conexión
             }
+            app = firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+
+            inboxRef = db.ref('mensajes/' + miId);
+
+            // Escuchar mensajes entrantes
+            if (escuchando) inboxRef.off(); // quitar listener anterior
+            inboxRef.on('child_added', (snapshot) => {
+                const mensaje = snapshot.val();
+                if (mensaje.sender === miId) return;
+
+                logP2P(`📨 Recibido de ${mensaje.sender}: ${mensaje.text}`);
+                addMessage(mensaje.text, 'received');
+
+                if (!idRemoto) {
+                    idRemoto = mensaje.sender;
+                    remotePeerIdInput.value = idRemoto;
+                    addSystemMessage(`📞 Llamada entrante de: ${idRemoto}`);
+                }
+
+                // Eliminar mensaje después de leerlo (opcional)
+                snapshot.ref.remove();
+            });
+            escuchando = true;
+
+            // Enviar mensajes pendientes
+            while (bufferMensajes.length) {
+                const { texto, destino } = bufferMensajes.shift();
+                enviarMensajeFirebase(texto, destino);
+            }
+
+            actualizarEstado('connected');
+            capaActualSpan.innerText = 'Firebase';
+            logP2P('✅ Conectado a Firebase');
         }
 
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const miId = obtenerIdDispositivo();
-                enviarAlMotor('INIT', { id: miId });
-            }, 500);
-        });
-
-        window.addEventListener('message', (event) => {
-            const { type, data } = event.data;
-
-            switch (type) {
-                case 'MI_ID':
-                    myPeerIdInput.value = data;
-                    logP2P(`✅ ID asignado: ${data}`);
-                    break;
-                case 'LLAMADA_ENTRANTE':
-                    remotePeerIdInput.value = data;
-                    addSystemMessage(`📞 Llamada entrante de: ${data}`);
-                    logP2P(`Llamada entrante de: ${data}`);
-                    switchP2PTab('chat');
-                    break;
-                case 'CONEXION_ESTABLECIDA':
-                    actualizarEstado('connected');
-                    addSystemMessage('✅ Conectado');
-                    logP2P('Conexión establecida');
-                    break;
-                case 'CONEXION_CERRADA':
-                    actualizarEstado('idle');
-                    addSystemMessage('🔌 Desconectado');
-                    logP2P('Conexión cerrada');
-                    break;
-                case 'MENSAJE_RECIBIDO':
-                    addMessage(data, 'received');
-                    logP2P('Mensaje recibido');
-                    break;
-                case 'ERROR_P2P':
-                    actualizarEstado('idle');
-                    addSystemMessage(`⚠️ Error: ${data}`);
-                    logP2P(`ERROR: ${data}`);
-                    break;
-                case 'LOG':
-                    logP2P(data);
-                    break;
-                case 'CAPA_ACTUAL':
-                    capaActualSpan.innerText = data;
-                    break;
+        function enviarMensajeFirebase(texto, destino) {
+            if (!db) {
+                bufferMensajes.push({ texto, destino });
+                return;
             }
-        });
 
-        // ========== FUNCIONES DE UI DEL CHAT ==========
+            const mensaje = {
+                sender: miId,
+                text: texto,
+                timestamp: Date.now()
+            };
+
+            db.ref('mensajes/' + destino).push(mensaje)
+                .then(() => logP2P(`Mensaje enviado a ${destino}`))
+                .catch(err => logP2P(`Error al enviar: ${err}`));
+        }
+
+        function reiniciarConexion(nuevoId) {
+            logP2P(`🔄 Reiniciando con nuevo ID: ${nuevoId}`);
+            if (app) {
+                app.delete();
+                app = null;
+                db = null;
+                escuchando = false;
+            }
+            bufferMensajes = [];
+            iniciarFirebase(nuevoId);
+        }
+
+        // ========== FUNCIONES DE UI ==========
         function addMessage(text, type) {
             const div = document.createElement('div');
             div.className = `message msg-${type}`;
@@ -398,14 +433,6 @@
             div.innerText = `--- ${text} ---`;
             chatWindow.appendChild(div);
             chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        function logP2P(mensaje) {
-            const logDiv = document.getElementById('p2p-log');
-            if (!logDiv) return;
-            const time = new Date().toLocaleTimeString().split(' ')[0];
-            logDiv.innerHTML += `<div>[${time}] ${mensaje}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
         }
 
         function actualizarEstado(estado) {
@@ -431,7 +458,7 @@
             document.getElementById('p2p-modal').showModal();
             myPeerIdInput.value = obtenerIdDispositivo();
             msgInput.focus();
-            loadContactsModal(); // cargar contactos en la pestaña
+            loadContactsModal();
         }
 
         function closeP2P() {
@@ -442,29 +469,42 @@
             const texto = msgInput.value.trim();
             if (!texto) return;
 
-            const idRemoto = remotePeerIdInput.value.trim();
-            if (!idRemoto) {
+            const destino = remotePeerIdInput.value.trim();
+            if (!destino) {
                 addSystemMessage('⚠️ Debes ingresar un ID remoto');
                 return;
             }
 
             msgInput.value = '';
             addMessage(texto, 'pending');
-            enviarAlMotor('ENVIAR_MENSAJE', { texto, idRemoto });
-            actualizarEstado('calling');
+            if (!db || !miId) {
+                bufferMensajes.push({ texto, destino });
+                iniciarFirebase(obtenerIdDispositivo());
+            } else {
+                enviarMensajeFirebase(texto, destino);
+            }
         }
 
         function conectarLlamada() {
-            const idRemoto = remotePeerIdInput.value.trim();
-            if (!idRemoto) {
+            const destino = remotePeerIdInput.value.trim();
+            if (!destino) {
                 alert('Ingresa un ID remoto');
                 return;
             }
-            enviarAlMotor('CONECTAR', { idRemoto });
-            actualizarEstado('calling');
+            idRemoto = destino;
+            addSystemMessage(`Conectado con ${destino} (simulado)`);
+            actualizarEstado('connected');
         }
 
-        // ========== PESTAÑAS DEL MODAL ==========
+        function reiniciarId() {
+            if (confirm('¿Generar un nuevo ID? Esto reiniciará la conexión.')) {
+                const nuevoId = generarNuevoId();
+                localStorage.setItem(ID_KEY, nuevoId);
+                reiniciarConexion(nuevoId);
+            }
+        }
+
+        // ========== PESTAÑAS MODAL ==========
         function switchP2PTab(tab) {
             document.getElementById('tab-chat-btn').classList.toggle('active', tab === 'chat');
             document.getElementById('tab-contacts-btn').classList.toggle('active', tab === 'contacts');
@@ -473,7 +513,7 @@
             if (tab === 'contacts') loadContactsModal();
         }
 
-        // ========== FUNCIONES DE CONTACTOS (modal) ==========
+        // ========== CONTACTOS MODAL ==========
         function loadContactsModal() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContactsModal();
@@ -485,19 +525,19 @@
             list.innerHTML = '';
             contacts.forEach((c, index) => {
                 const li = document.createElement('li');
-                li.className = 'contact-item';
+                li.className = 'contact-item-modal';
                 li.onclick = (e) => {
-                    if (!e.target.classList.contains('btn-delete-contact')) {
+                    if (!e.target.classList.contains('btn-delete-contact-modal')) {
                         remotePeerIdInput.value = c.id;
                         switchP2PTab('chat');
                     }
                 };
                 li.innerHTML = `
-                    <div class="contact-info">
-                        <span class="contact-name">${c.name}</span>
-                        <span class="contact-id">${c.id}</span>
+                    <div class="contact-info-modal">
+                        <span class="contact-name-modal">${c.name}</span>
+                        <span class="contact-id-modal">${c.id}</span>
                     </div>
-                    <button class="btn-delete-contact" onclick="deleteContactModal(${index})" title="Borrar">🗑️</button>
+                    <button class="btn-delete-contact-modal" onclick="deleteContactModal(${index})" title="Borrar">🗑️</button>
                 `;
                 list.appendChild(li);
             });
@@ -522,7 +562,7 @@
             }
         }
 
-        // ========== FUNCIONES DE LA SIDEBAR (contactos originales) ==========
+        // ========== FUNCIONES SIDEBAR (contactos) ==========
         function loadContacts() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContacts();
@@ -538,7 +578,7 @@
                 li.onclick = (e) => {
                     if (!e.target.classList.contains('btn-delete-contact')) {
                         remotePeerIdInput.value = c.id;
-                        openP2P(); // abrir modal y cambiar a chat
+                        openP2P();
                     }
                 };
                 li.innerHTML = `
@@ -571,7 +611,7 @@
             }
         }
 
-        // ========== FUNCIONES DE POSTS Y RSS (completas) ==========
+        // ========== FUNCIONES DE POSTS Y RSS (sin cambios) ==========
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         let currentFeedTab = 'my-posts';
 
@@ -580,9 +620,7 @@
             try {
                 const response = await fetch('posts.json');
                 if (response.ok) serverPosts = await response.json();
-            } catch (e) {
-                console.log("No posts.json found.");
-            }
+            } catch (e) {}
             let localPosts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
             const serverIds = new Set(serverPosts.map(p => p.id));
             const uniqueLocalPosts = localPosts.filter(p => !serverIds.has(p.id));
@@ -730,12 +768,7 @@
                 const m = post.content.match(/src="([^"]+)"/);
                 media = m ? `<div class="media-container"><img src="${m[1]}"></div>` : `<div class="media-container"><img src="https://picsum.photos/seed/${post.title.replace(/\s/g,'')}/600/300" style="opacity:0.8"></div>`;
             }
-            let contentHtml = '';
-            if (isOwn) {
-                contentHtml = post.content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-            } else {
-                contentHtml = post.content;
-            }
+            let contentHtml = isOwn ? post.content.replace(/[&<>"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])) : post.content;
             card.innerHTML = `
                 <div class="post-meta"><span>📅 ${new Date(post.date).toLocaleDateString()}</span><span>${isOwn?'✏️ Propio':'🌳 '+(post.author||'Externo')}</span></div>
                 <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${contentHtml} ${!isOwn?`<br><br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer original ↗</a>`:''}</div>`;
@@ -743,38 +776,23 @@
         }
 
         function getMimeType(extension) {
-            const ext = extension.toLowerCase();
-            const map = { 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'mp4': 'video/mp4', 'webm': 'video/webm', 'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'pdf': 'application/pdf' };
-            return map[ext] || 'application/octet-stream';
+            const map = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', mp4:'video/mp4', webm:'video/webm', mp3:'audio/mpeg', wav:'audio/wav', pdf:'application/pdf' };
+            return map[extension.toLowerCase()] || 'application/octet-stream';
         }
 
         function escapeXml(unsafe) {
-            return unsafe.replace(/[<>&'"]/g, function (c) {
-                switch (c) { case '<': return '&lt;'; case '>': return '&gt;'; case '&': return '&amp;'; case '\'': return '&apos;'; case '"': return '&quot;'; }
-            });
+            return unsafe.replace(/[<>&'"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;' }[c]));
         }
 
-        function formatDateRFC822(isoString) {
-            return new Date(isoString).toUTCString();
-        }
+        function formatDateRFC822(isoString) { return new Date(isoString).toUTCString(); }
 
         async function generateAndDownloadRSS() {
             const siteUrlInput = document.getElementById('site-url-input');
             const siteUrl = siteUrlInput.value.trim();
-            if (!siteUrl) {
-                alert("Por favor ingresa la URL base de tu sitio (ej: https://usuario.github.io/repo/)");
-                return;
-            }
+            if (!siteUrl) { alert("Ingresa la URL base de tu sitio"); return; }
             const baseUrl = siteUrl.endsWith('/') ? siteUrl : siteUrl + '/';
             const posts = await loadPostsData();
-            let xml = `<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0">
-  <channel>
-    <title>Árbol: Red Social Libre</title>
-    <link>${baseUrl}</link>
-    <description>Un espacio personal y libre para compartir ideas, multimedia y pensamientos.</description>
-    <language>es</language>
-`;
+            let xml = `<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel><title>Árbol: Red Social Libre</title><link>${baseUrl}</link><description>Un espacio personal y libre para compartir ideas, multimedia y pensamientos.</description><language>es</language>`;
             posts.forEach(post => {
                 const pubDate = formatDateRFC822(post.date);
                 const link = `${baseUrl}#post-${post.id}`;
@@ -782,35 +800,24 @@
                 let enclosureTag = "";
                 if (post.media) {
                     const mediaUrl = `${baseUrl}media/${post.media}`;
-                    const ext = post.media.split('.').pop();
-                    const mime = getMimeType(ext);
-                    enclosureTag = `\n    <enclosure url="${mediaUrl}" type="${mime}"/>`;
+                    const mime = getMimeType(post.media.split('.').pop());
+                    enclosureTag = `<enclosure url="${mediaUrl}" type="${mime}"/>`;
                 }
-                xml += `
-    <item>
-      <title>${escapeXml(post.title)}</title>
-      <link>${link}</link>
-      <description>${description}</description>
-      <pubDate>${pubDate}</pubDate>${enclosureTag}
-    </item>`;
+                xml += `<item><title>${escapeXml(post.title)}</title><link>${link}</link><description>${description}</description><pubDate>${pubDate}</pubDate>${enclosureTag}</item>`;
             });
-            xml += `
-  </channel>
-</rss>`;
+            xml += `</channel></rss>`;
             const blob = new Blob([xml], { type: "application/xml" });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = "rss.xml";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            alert("Archivo rss.xml generado. Súbelo a tu repositorio para actualizar el feed.");
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "rss.xml"; a.click();
+            alert("Archivo rss.xml generado. Súbelo a tu repositorio.");
         }
 
-        // Inicialización
+        // ========== INICIALIZACIÓN ==========
         document.addEventListener('DOMContentLoaded', () => {
             loadMyPosts();
             loadContacts();
+            // Iniciar Firebase con el ID guardado
+            const idGuardado = obtenerIdDispositivo();
+            iniciarFirebase(idGuardado);
 
             if (msgInput) {
                 msgInput.addEventListener('keydown', (e) => {
