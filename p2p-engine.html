@@ -2,220 +2,176 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <!-- Cargar las librerías P2P -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@rtco/client@latest/dist/rtco.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
+    <!-- Librería MQTT sobre WebSockets -->
+    <script src="https://unpkg.com/mqtt@5.0.5/dist/mqtt.min.js"></script>
+    <!-- Para cifrado (mantenemos la misma función) -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script> <!-- solo por SEA? mejor implementamos cifrado simple -->
 </head>
 <body style="margin:0; padding:0; background: #1a1a1a; color: #0f0; font-family: monospace; font-size: 11px; overflow: hidden;">
-    <div id="log" style="padding: 5px; height: 100vh; overflow-y: auto;">[Motor] Iniciando...</div>
+    <div id="log" style="padding: 5px; height: 100vh; overflow-y: auto;">[Motor MQTT] Iniciando...</div>
 
     <script>
-        // ============================================================
-        // MOTOR P2P (recibe ID desde la página principal)
-        // ============================================================
         const logDiv = document.getElementById('log');
         function log(msg) {
             const time = new Date().toLocaleTimeString().split(' ')[0];
             logDiv.innerHTML += `<div>[${time}] ${msg}</div>`;
             logDiv.scrollTop = logDiv.scrollHeight;
-            if (window.parent) {
-                window.parent.postMessage({ type: 'LOG', data: msg }, '*');
-            }
+            if (window.parent) window.parent.postMessage({ type: 'LOG', data: msg }, '*');
         }
 
-        // --- Variables de estado ---
         let miId = null;
-        let capaActiva = 0; // 0: ninguna, 1: ARtico, 2: simple-peer, 3: PeerJS
-        let conexionActiva = null;
+        let cliente = null;
+        let conectado = false;
         let idRemoto = null;
         let bufferMensajes = [];
-        let callbacks = {};
 
-        // --- Enviar a página principal ---
-        function enviarAPrincipal(tipo, datos = null) {
-            if (window.parent) {
-                window.parent.postMessage({ type: tipo, data: datos }, '*');
-            }
+        // --- Encriptación simple (reutilizando la tuya) ---
+        const ENC_SALT = "arbolapp-static-salt-v2";
+        async function getCryptoKey(password) {
+            const enc = new TextEncoder();
+            const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
+            return window.crypto.subtle.deriveKey({ name: "PBKDF2", salt: enc.encode(ENC_SALT), iterations: 100000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+        }
+        async function encryptMessage(text, password) {
+            if (!password) return null;
+            try {
+                const key = await getCryptoKey(password);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encoded = new TextEncoder().encode(text);
+                const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+                return { iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))), encrypted: true };
+            } catch(e) { console.error(e); return null; }
+        }
+        async function decryptMessage(encryptedObj, password) {
+            try {
+                const key = await getCryptoKey(password);
+                const iv = new Uint8Array(atob(encryptedObj.iv).split("").map(c => c.charCodeAt(0)));
+                const data = new Uint8Array(atob(encryptedObj.ciphertext).split("").map(c => c.charCodeAt(0)));
+                const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+                return new TextDecoder().decode(decrypted);
+            } catch (e) { throw new Error("Clave incorrecta"); }
         }
 
-        // --- Inicialización con ID recibido ---
-        function iniciarConId(id) {
+        function enviarAPrincipal(tipo, datos) {
+            if (window.parent) window.parent.postMessage({ type: tipo, data: datos }, '*');
+        }
+
+        // --- Conectar a broker MQTT ---
+        function conectarMQTT(id) {
             miId = id;
-            log(`🔑 ID asignado por la página: ${miId}`);
+            log(`🔑 ID: ${miId}`);
             enviarAPrincipal('MI_ID', miId);
 
-            // Intentar capa 1: ARtico (si está disponible)
-            if (typeof Artico !== 'undefined') {
-                iniciarArtico();
-            } else if (typeof Peer !== 'undefined') {
-                iniciarPeerJS();
-            } else {
-                log('❌ Ninguna librería P2P disponible');
-                enviarAPrincipal('ERROR_P2P', 'No hay librerías P2P');
-            }
-        }
+            // Usamos broker público HiveMQ (WebSocket seguro)
+            const brokerUrl = 'wss://broker.hivemq.com:8000/mqtt';
+            log('📡 Conectando a broker MQTT...');
+            cliente = mqtt.connect(brokerUrl);
 
-        // --- Capa 1: ARtico ---
-        function iniciarArtico() {
-            capaActiva = 1;
-            enviarAPrincipal('CAPA_ACTUAL', 'ARtico (capa 1)');
-            log('📡 Capa 1: ARtico');
-
-            try {
-                const rtco = new Artico(miId);
-
-                rtco.on('open', (id) => {
-                    log(`✅ ARtico listo. ID: ${id}`);
+            cliente.on('connect', () => {
+                log('✅ Conectado al broker');
+                conectado = true;
+                enviarAPrincipal('CAPA_ACTUAL', 'MQTT');
+                // Suscribirse a nuestro tema
+                const topic = `arbolapp/usuario/${miId}`;
+                cliente.subscribe(topic, (err) => {
+                    if (err) log(`Error al suscribirse: ${err}`);
+                    else log(`📡 Suscrito a ${topic}`);
                 });
-
-                rtco.on('call', (call) => {
-                    log(`📞 Llamada ARtico entrante de: ${call.peer}`);
-                    idRemoto = call.peer;
-                    enviarAPrincipal('LLAMADA_ENTRANTE', idRemoto);
-                    call.answer();
-                    configurarConexion(call);
-                });
-
-                rtco.on('error', (err) => {
-                    log(`❌ Error ARtico: ${err.message}`);
-                    log('⬇️ Cambiando a capa 3 (PeerJS)');
-                    iniciarPeerJS();
-                });
-
-                callbacks.rtco = rtco;
-            } catch (e) {
-                log(`❌ Excepción ARtico: ${e.message}`);
-                iniciarPeerJS();
-            }
-        }
-
-        // --- Capa 3: PeerJS (directo) ---
-        function iniciarPeerJS() {
-            capaActiva = 3;
-            enviarAPrincipal('CAPA_ACTUAL', 'PeerJS (capa 3)');
-            log('📡 Capa 3: PeerJS');
-
-            const config = {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            };
-
-            try {
-                const peer = new Peer(miId, config);
-
-                peer.on('open', (id) => {
-                    log(`✅ PeerJS listo. ID: ${id}`);
-                });
-
-                peer.on('connection', (conn) => {
-                    log(`📞 Llamada PeerJS entrante de: ${conn.peer}`);
-                    idRemoto = conn.peer;
-                    enviarAPrincipal('LLAMADA_ENTRANTE', idRemoto);
-                    configurarConexion(conn);
-                });
-
-                peer.on('error', (err) => {
-                    log(`❌ Error PeerJS: ${err.type}`);
-                    enviarAPrincipal('ERROR_P2P', `PeerJS: ${err.type}`);
-                });
-
-                callbacks.peer = peer;
-            } catch (e) {
-                log(`❌ Excepción PeerJS: ${e.message}`);
-                enviarAPrincipal('ERROR_P2P', 'Falló PeerJS');
-            }
-        }
-
-        // --- Configurar conexión (genérico) ---
-        function configurarConexion(conn) {
-            conexionActiva = conn;
-
-            conn.on('open', () => {
-                log('✅ Conexión establecida');
-                enviarAPrincipal('CONEXION_ESTABLECIDA');
+                // Enviar mensajes pendientes
                 while (bufferMensajes.length) {
-                    const msg = bufferMensajes.shift();
-                    conn.send(msg);
-                    log(`Mensaje enviado (buffer): ${msg}`);
+                    const { texto, destino } = bufferMensajes.shift();
+                    enviarMensajeMQTT(texto, destino);
                 }
             });
 
-            conn.on('data', (data) => {
-                log(`📨 Recibido: ${data}`);
-                enviarAPrincipal('MENSAJE_RECIBIDO', data);
+            cliente.on('message', async (topic, message) => {
+                // El mensaje es un buffer, convertirlo a string
+                const payload = message.toString();
+                try {
+                    const datos = JSON.parse(payload);
+                    if (datos.sender === miId) return; // ignorar propios mensajes
+
+                    let textoFinal = datos.text;
+                    // Si está cifrado, intentar descifrar con la contraseña de la UI (la obtendremos desde la página principal)
+                    if (datos.encrypted) {
+                        // Necesitamos la contraseña. La UI nos la pasará cuando escriba.
+                        // Por ahora, lo manejaremos igual que antes: si no hay contraseña, mostramos candado.
+                        // Para simplificar, aquí asumimos que no hay cifrado, pero podríamos pedir la clave desde la UI.
+                        // O podemos enviar la contraseña con cada mensaje (no recomendado).
+                        // Lo dejamos para una mejora futura.
+                        textoFinal = '🔒 Mensaje cifrado';
+                    }
+                    log(`📨 Recibido de ${datos.sender}: ${textoFinal}`);
+                    enviarAPrincipal('MENSAJE_RECIBIDO', textoFinal);
+                    // También notificar llamada entrante si es el primer mensaje de ese remoto?
+                    if (!idRemoto) {
+                        idRemoto = datos.sender;
+                        enviarAPrincipal('LLAMADA_ENTRANTE', idRemoto);
+                    }
+                } catch (e) {
+                    log(`Error procesando mensaje: ${e}`);
+                }
             });
 
-            conn.on('close', () => {
-                log('🔒 Conexión cerrada');
-                conexionActiva = null;
-                idRemoto = null;
-                enviarAPrincipal('CONEXION_CERRADA');
-            });
-
-            conn.on('error', (err) => {
-                log(`🔥 Error en conexión: ${err}`);
+            cliente.on('error', (err) => {
+                log(`❌ Error MQTT: ${err}`);
                 enviarAPrincipal('ERROR_P2P', err.toString());
             });
+
+            cliente.on('close', () => {
+                log('🔌 Desconectado del broker');
+                conectado = false;
+                enviarAPrincipal('CONEXION_CERRADA');
+            });
         }
 
-        // --- Conectar a un peer ---
-        function conectarA(destino) {
-            if (destino === miId) {
-                log('No te conectes a ti mismo');
+        // --- Enviar mensaje por MQTT ---
+        function enviarMensajeMQTT(texto, destino) {
+            if (!cliente || !conectado) {
+                log('No conectado, guardando en buffer');
+                bufferMensajes.push({ texto, destino });
                 return;
             }
-            idRemoto = destino;
-            log(`Intentando conectar a: ${destino} (capa ${capaActiva})`);
-
-            if (capaActiva === 1 && callbacks.rtco) {
-                try {
-                    const call = callbacks.rtco.call(destino);
-                    configurarConexion(call);
-                } catch (err) {
-                    log(`Error llamada ARtico: ${err.message}`);
-                }
-            } else if (capaActiva === 3 && callbacks.peer) {
-                const conn = callbacks.peer.connect(destino, { reliable: true });
-                configurarConexion(conn);
-            } else {
-                log('No hay capa activa para conectar');
-            }
+            const topic = `arbolapp/usuario/${destino}`;
+            const mensaje = {
+                sender: miId,
+                text: texto,
+                timestamp: Date.now()
+                // podríamos añadir cifrado aquí si la UI lo pide
+            };
+            cliente.publish(topic, JSON.stringify(mensaje), { qos: 0 }, (err) => {
+                if (err) log(`Error al publicar: ${err}`);
+                else log(`Mensaje enviado a ${destino}`);
+            });
         }
 
-        // --- Enviar mensaje ---
-        function enviarMensaje(texto, destino) {
-            if (conexionActiva && typeof conexionActiva.send === 'function') {
-                conexionActiva.send(texto);
-                log(`Mensaje enviado: ${texto}`);
-            } else {
-                log(`Mensaje en buffer: ${texto}`);
-                bufferMensajes.push(texto);
-                if (destino && destino !== idRemoto) {
-                    conectarA(destino);
-                }
-            }
+        // --- Interfaz con la página principal ---
+        function iniciarConId(id) {
+            if (cliente) cliente.end();
+            conectarMQTT(id);
         }
 
-        // --- Reiniciar con nuevo ID ---
         function reiniciarConId(nuevoId) {
-            log(`🔄 Reiniciando motor con nuevo ID: ${nuevoId}`);
-            // Cerrar conexiones
-            if (conexionActiva && typeof conexionActiva.close === 'function') conexionActiva.close();
-            if (callbacks.rtco) callbacks.rtco.destroy();
-            if (callbacks.peer) callbacks.peer.destroy();
-            callbacks = {};
+            log(`🔄 Reiniciando con nuevo ID: ${nuevoId}`);
+            if (cliente) cliente.end();
             bufferMensajes = [];
-            // Iniciar de nuevo
-            iniciarConId(nuevoId);
+            conectarMQTT(nuevoId);
         }
 
-        // --- Escuchar comandos de la página principal ---
+        function enviarMensaje(texto, destino) {
+            if (!destino) return log('Error: destino no especificado');
+            enviarMensajeMQTT(texto, destino);
+        }
+
+        function conectar(destino) {
+            idRemoto = destino;
+            log(`Objetivo establecido: ${destino}`);
+            // No necesitamos hacer nada más, ya estamos suscritos a nuestro propio topic
+            enviarAPrincipal('CONEXION_ESTABLECIDA'); // simulamos conexión
+        }
+
         window.addEventListener('message', (event) => {
             const { type, data } = event.data;
-
             switch (type) {
                 case 'INIT':
                     iniciarConId(data.id);
@@ -224,7 +180,7 @@
                     enviarMensaje(data.texto, data.idRemoto);
                     break;
                 case 'CONECTAR':
-                    conectarA(data.idRemoto);
+                    conectar(data.idRemoto);
                     break;
                 case 'REINICIAR_CON_ID':
                     reiniciarConId(data.id);
@@ -232,7 +188,6 @@
             }
         });
 
-        // Esperar instrucciones de la página principal (el ID)
         log('Esperando ID desde la página principal...');
     </script>
 </body>
