@@ -2,10 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <!-- Librería MQTT sobre WebSockets -->
     <script src="https://unpkg.com/mqtt@5.0.5/dist/mqtt.min.js"></script>
-    <!-- Para cifrado (mantenemos la misma función) -->
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script> <!-- solo por SEA? mejor implementamos cifrado simple -->
 </head>
 <body style="margin:0; padding:0; background: #1a1a1a; color: #0f0; font-family: monospace; font-size: 11px; overflow: hidden;">
     <div id="log" style="padding: 5px; height: 100vh; overflow-y: auto;">[Motor MQTT] Iniciando...</div>
@@ -25,44 +22,15 @@
         let idRemoto = null;
         let bufferMensajes = [];
 
-        // --- Encriptación simple (reutilizando la tuya) ---
-        const ENC_SALT = "arbolapp-static-salt-v2";
-        async function getCryptoKey(password) {
-            const enc = new TextEncoder();
-            const keyMaterial = await window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
-            return window.crypto.subtle.deriveKey({ name: "PBKDF2", salt: enc.encode(ENC_SALT), iterations: 100000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-        }
-        async function encryptMessage(text, password) {
-            if (!password) return null;
-            try {
-                const key = await getCryptoKey(password);
-                const iv = window.crypto.getRandomValues(new Uint8Array(12));
-                const encoded = new TextEncoder().encode(text);
-                const ciphertext = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-                return { iv: btoa(String.fromCharCode(...iv)), ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))), encrypted: true };
-            } catch(e) { console.error(e); return null; }
-        }
-        async function decryptMessage(encryptedObj, password) {
-            try {
-                const key = await getCryptoKey(password);
-                const iv = new Uint8Array(atob(encryptedObj.iv).split("").map(c => c.charCodeAt(0)));
-                const data = new Uint8Array(atob(encryptedObj.ciphertext).split("").map(c => c.charCodeAt(0)));
-                const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
-                return new TextDecoder().decode(decrypted);
-            } catch (e) { throw new Error("Clave incorrecta"); }
-        }
-
         function enviarAPrincipal(tipo, datos) {
             if (window.parent) window.parent.postMessage({ type: tipo, data: datos }, '*');
         }
 
-        // --- Conectar a broker MQTT ---
         function conectarMQTT(id) {
             miId = id;
             log(`🔑 ID: ${miId}`);
             enviarAPrincipal('MI_ID', miId);
 
-            // Usamos broker público HiveMQ (WebSocket seguro)
             const brokerUrl = 'wss://broker.hivemq.com:8000/mqtt';
             log('📡 Conectando a broker MQTT...');
             cliente = mqtt.connect(brokerUrl);
@@ -71,39 +39,24 @@
                 log('✅ Conectado al broker');
                 conectado = true;
                 enviarAPrincipal('CAPA_ACTUAL', 'MQTT');
-                // Suscribirse a nuestro tema
                 const topic = `arbolapp/usuario/${miId}`;
                 cliente.subscribe(topic, (err) => {
                     if (err) log(`Error al suscribirse: ${err}`);
                     else log(`📡 Suscrito a ${topic}`);
                 });
-                // Enviar mensajes pendientes
                 while (bufferMensajes.length) {
                     const { texto, destino } = bufferMensajes.shift();
                     enviarMensajeMQTT(texto, destino);
                 }
             });
 
-            cliente.on('message', async (topic, message) => {
-                // El mensaje es un buffer, convertirlo a string
+            cliente.on('message', (topic, message) => {
                 const payload = message.toString();
                 try {
                     const datos = JSON.parse(payload);
-                    if (datos.sender === miId) return; // ignorar propios mensajes
-
-                    let textoFinal = datos.text;
-                    // Si está cifrado, intentar descifrar con la contraseña de la UI (la obtendremos desde la página principal)
-                    if (datos.encrypted) {
-                        // Necesitamos la contraseña. La UI nos la pasará cuando escriba.
-                        // Por ahora, lo manejaremos igual que antes: si no hay contraseña, mostramos candado.
-                        // Para simplificar, aquí asumimos que no hay cifrado, pero podríamos pedir la clave desde la UI.
-                        // O podemos enviar la contraseña con cada mensaje (no recomendado).
-                        // Lo dejamos para una mejora futura.
-                        textoFinal = '🔒 Mensaje cifrado';
-                    }
-                    log(`📨 Recibido de ${datos.sender}: ${textoFinal}`);
-                    enviarAPrincipal('MENSAJE_RECIBIDO', textoFinal);
-                    // También notificar llamada entrante si es el primer mensaje de ese remoto?
+                    if (datos.sender === miId) return;
+                    log(`📨 Recibido de ${datos.sender}: ${datos.text}`);
+                    enviarAPrincipal('MENSAJE_RECIBIDO', datos.text);
                     if (!idRemoto) {
                         idRemoto = datos.sender;
                         enviarAPrincipal('LLAMADA_ENTRANTE', idRemoto);
@@ -125,10 +78,8 @@
             });
         }
 
-        // --- Enviar mensaje por MQTT ---
         function enviarMensajeMQTT(texto, destino) {
             if (!cliente || !conectado) {
-                log('No conectado, guardando en buffer');
                 bufferMensajes.push({ texto, destino });
                 return;
             }
@@ -137,7 +88,6 @@
                 sender: miId,
                 text: texto,
                 timestamp: Date.now()
-                // podríamos añadir cifrado aquí si la UI lo pide
             };
             cliente.publish(topic, JSON.stringify(mensaje), { qos: 0 }, (err) => {
                 if (err) log(`Error al publicar: ${err}`);
@@ -145,7 +95,6 @@
             });
         }
 
-        // --- Interfaz con la página principal ---
         function iniciarConId(id) {
             if (cliente) cliente.end();
             conectarMQTT(id);
@@ -165,9 +114,7 @@
 
         function conectar(destino) {
             idRemoto = destino;
-            log(`Objetivo establecido: ${destino}`);
-            // No necesitamos hacer nada más, ya estamos suscritos a nuestro propio topic
-            enviarAPrincipal('CONEXION_ESTABLECIDA'); // simulamos conexión
+            enviarAPrincipal('CONEXION_ESTABLECIDA');
         }
 
         window.addEventListener('message', (event) => {
