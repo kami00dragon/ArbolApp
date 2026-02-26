@@ -6,7 +6,7 @@
     <title>ArbolApp - Red Social Libre</title>
     
     <style>
-        /* ========== TUS ESTILOS COMPLETOS (los mismos que ya tenías funcionando) ========== */
+        /* ========== TUS ESTILOS COMPLETOS (los mismos) ========== */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -34,16 +34,6 @@
         .btn-rss:hover { background: #F57C00; }
         .btn-secondary { width: 100%; padding: 10px; background: #5d4037; color: white; border: 1px solid #8d6e63; border-radius: 5px; font-size: 0.9rem; cursor: pointer; margin-top: 5px; }
         .btn-secondary:hover { background: #4e342e; }
-
-        /* Agenda */
-        .contact-list { list-style: none; padding: 0; margin: 0; }
-        .contact-item { background: rgba(0,0,0,0.2); padding: 10px; margin-bottom: 8px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; transition: background 0.2s; }
-        .contact-item:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
-        .contact-info { flex-grow: 1; overflow: hidden; }
-        .contact-name { font-weight: bold; color: #ffcc80; display: block; }
-        .contact-id { font-family: monospace; font-size: 0.8rem; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .btn-delete-contact { background: none; border: none; color: #e53935; cursor: pointer; font-size: 1.1rem; padding: 0 5px; }
-        .btn-delete-contact:hover { color: #ff5252; }
 
         /* Feed */
         .main-feed { background-color: rgba(62, 39, 35, 0.95); overflow-y: auto; height: 100vh; border-left: 8px solid var(--wood-dark); position: relative; }
@@ -73,14 +63,20 @@
         .input-group { display: flex; gap: 5px; margin-bottom: 10px; }
         .input-group input { flex: 1; }
 
-        /* Modal P2P (compacto) */
-        dialog { border: 4px solid var(--leaf-green); border-radius: 15px; padding: 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 95%; max-width: 600px; background: var(--wood-light); color: var(--text-parchment); }
+        /* Modal P2P (con pestañas de chat y contactos) */
+        dialog { border: 4px solid var(--leaf-green); border-radius: 15px; padding: 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 95%; max-width: 650px; background: var(--wood-light); color: var(--text-parchment); }
         dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
         .p2p-header { background: var(--leaf-green); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--flower-pink); }
         .p2p-header h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
         .bird-logo { width: 32px; height: 32px; display: inline-block; }
         .bird-logo svg { width: 100%; height: 100%; stroke: #000; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         
+        .p2p-tabs { display: flex; background: #1b5e20; }
+        .p2p-tab { flex: 1; background: none; border: none; color: #a5d6a7; padding: 12px 0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
+        .p2p-tab.active { background: var(--wood-light); color: var(--text-parchment); border-bottom-color: var(--flower-pink); }
+        .p2p-tab-content { padding: 15px; display: block; }
+        .p2p-tab-content.hidden { display: none; }
+
         .p2p-status-bar { display: flex; align-items: center; gap: 8px; padding: 8px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-stem); font-size: 0.9rem; }
         .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
         .status-idle { background-color: #9e9e9e; }
@@ -88,17 +84,17 @@
         .status-connected { background-color: #4CAF50; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        .p2p-body { padding: 20px; display: flex; flex-direction: column; height: 500px; }
-        .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin-bottom: 10px; padding: 5px; font-family: monospace; font-size: 0.7rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
+        .p2p-body { padding: 0; display: flex; flex-direction: column; height: 550px; }
+        .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin: 10px; padding: 5px; font-family: monospace; font-size: 0.7rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
-        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 15px; font-family: monospace; font-size: 0.9rem; }
+        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin: 0 10px 10px 10px; font-family: monospace; font-size: 0.9rem; }
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; border: 1px solid #1b5e20; }
         .msg-received { background: #555; color: white; align-self: flex-start; border: 1px solid #777; }
         .msg-system { text-align: center; color: #aaa; font-size: 0.8rem; font-style: italic; margin: 5px 0; }
         .msg-pending { color: #ff9800; font-style: italic; font-size: 0.8rem; }
 
-        .peer-ids { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .peer-ids { display: flex; gap: 10px; margin: 0 10px 10px 10px; flex-wrap: wrap; }
         .peer-id-box { flex: 1; min-width: 200px; background: #2a1b15; border: 1px solid #5d4037; border-radius: 4px; padding: 8px; }
         .peer-id-box label { display: block; font-size: 0.7rem; color: #aaa; margin-bottom: 3px; }
         .peer-id-value { display: flex; gap: 5px; align-items: center; }
@@ -106,9 +102,9 @@
         .peer-id-value button { background: #5d4037; border: none; color: white; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 0.8rem; }
         .peer-id-value button:hover { background: #795548; }
 
-        .message-controls { display: flex; flex-direction: column; gap: 10px; }
+        .message-controls { display: flex; flex-direction: column; gap: 10px; margin: 0 10px 10px 10px; }
         .message-input-area { display: flex; gap: 10px; }
-        #msg-input { flex: 1; background: #2a1b15; border: 1px solid #795548; color: #fff; padding: 12px; border-radius: 5px; font-family: inherit; resize: none; min-height: 80px; font-size: 1rem; }
+        #msg-input { flex: 1; background: #2a1b15; border: 1px solid #795548; color: #fff; padding: 12px; border-radius: 5px; font-family: inherit; resize: none; min-height: 60px; font-size: 1rem; }
         #msg-input:disabled { background: #221; color: #555; }
         .btn-send { background: var(--flower-pink); color: white; border: none; padding: 0 25px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
         .btn-send:hover { background: #c2185b; }
@@ -116,6 +112,18 @@
         .btn-call { background: #2196F3; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom:10px;}
         .btn-call:hover { background: #1976D2; }
         .btn-call:disabled { background: #4a6b8f; cursor: not-allowed; }
+
+        /* Estilos para contactos */
+        .contact-list { list-style: none; padding: 0; margin: 10px 0; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 5px; }
+        .contact-item { background: rgba(0,0,0,0.2); padding: 8px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; }
+        .contact-item:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
+        .contact-info { flex-grow: 1; overflow: hidden; }
+        .contact-name { font-weight: bold; color: #ffcc80; display: block; }
+        .contact-id { font-family: monospace; font-size: 0.7rem; color: #aaa; }
+        .btn-delete-contact { background: none; border: none; color: #e53935; cursor: pointer; font-size: 1rem; padding: 0 5px; }
+        .btn-delete-contact:hover { color: #ff5252; }
+        .add-contact { display: flex; gap: 5px; margin-top: 10px; }
+        .add-contact input { flex: 1; background: #2a1b15; border: 1px solid #5d4037; color: #fff; padding: 8px; border-radius: 4px; }
 
         @media (max-width: 900px) {
             .app-layout { grid-template-columns: 1fr; overflow-y: auto; }
@@ -128,14 +136,13 @@
 </head>
 <body>
     <div class="app-layout">
-        <!-- SIDEBAR (completo) -->
+        <!-- SIDEBAR (sin contactos, solo editor y datos) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🌱 ArbolApp</h2>
             </div>
             <div class="sidebar-tabs">
                 <button class="tab-btn active" onclick="switchSidebarTab('editor', event)">✏️ Escribir</button>
-                <button class="tab-btn" onclick="switchSidebarTab('contacts', event)">👥 Contactos</button>
                 <button class="tab-btn" onclick="switchSidebarTab('data', event)">💾 Datos</button>
             </div>
             <div id="tab-editor" class="sidebar-content">
@@ -145,18 +152,11 @@
                 <div class="form-group"><label>Tipo</label><select id="post-type"><option value="image">Imagen</option><option value="video">Video</option><option value="audio">Audio</option><option value="document">Documento</option><option value="none">Solo texto</option></select></div>
                 <button class="btn-action" onclick="publishPost()">🌱 Publicar (Guardar Local)</button>
             </div>
-            <div id="tab-contacts" class="sidebar-content" style="display: none;">
-                <h3 style="color:var(--leaf-light);">👥 Agenda P2P</h3>
-                <div class="form-group"><label>Nombre</label><input type="text" id="contact-name"></div>
-                <div class="form-group"><label>ID</label><input type="text" id="contact-id"></div>
-                <button class="btn-action" onclick="addContact()">➕ Agregar</button>
-                <ul id="contact-list" class="contact-list"></ul>
-            </div>
             <div id="tab-data" class="sidebar-content" style="display: none;">
                 <h3 style="color:var(--leaf-light);">📦 Datos</h3>
                 <button class="btn-action" onclick="exportToJson()">⬇️ Exportar posts.json</button>
                 <button class="btn-secondary" onclick="clearLocalData()">Borrar locales</button>
-                <button class="btn-secondary" onclick="resetPeerId()">🔄 Reiniciar ID P2P</button>
+                <!-- El botón de reiniciar ID ya no está aquí, se movió al modal -->
             </div>
         </aside>
 
@@ -176,38 +176,63 @@
         </main>
     </div>
 
-    <!-- MODAL CHAT P2P -->
+    <!-- MODAL P2P (con pestañas Chat y Contactos) -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
-            <h3><span class="bird-logo"><svg viewBox="0 0 100 100"><path d="M20,50 Q40,20 70,30 Q90,40 80,70 Q70,90 40,80 Q20,70 30,40 Q35,30 50,35" stroke="black" fill="none" stroke-width="5"/><path d="M55,38 L80,25" stroke="black" stroke-width="4"/><circle cx="45" cy="45" r="3" fill="black"/></svg></span> Chat P2P</h3>
+            <h3><span class="bird-logo"><svg viewBox="0 0 100 100"><path d="M20,50 Q40,20 70,30 Q90,40 80,70 Q70,90 40,80 Q20,70 30,40 Q35,30 50,35" stroke="black" fill="none" stroke-width="5"/><path d="M55,38 L80,25" stroke="black" stroke-width="4"/><circle cx="45" cy="45" r="3" fill="black"/></svg></span> Comunicación P2P</h3>
             <button onclick="closeP2P()" style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
         </div>
-        <div class="p2p-status-bar">
-            <span class="status-indicator" id="status-indicator"></span>
-            <span id="status-text">Desconectado</span>
+        <!-- Pestañas -->
+        <div class="p2p-tabs">
+            <button class="p2p-tab active" id="tab-chat-btn" onclick="switchP2PTab('chat')">💬 Chat</button>
+            <button class="p2p-tab" id="tab-contacts-btn" onclick="switchP2PTab('contacts')">📒 Contactos</button>
         </div>
-        <div id="p2p-log" class="p2p-log">Esperando motor...</div>
-        <div class="p2p-body">
-            <div id="chat-window" class="chat-window"></div>
-            <div class="peer-ids">
-                <div class="peer-id-box"><label>Tu ID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
-                <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
+        <!-- Contenido Chat -->
+        <div id="p2p-tab-chat" class="p2p-tab-content">
+            <div class="p2p-status-bar">
+                <span class="status-indicator" id="status-indicator"></span>
+                <span id="status-text">Desconectado</span>
+                <span style="flex:1; text-align:right; font-size:0.7rem;" id="capa-actual"></span>
             </div>
-            <button class="btn-call" onclick="conectarLlamada()">📞 Llamar / Conectar</button>
-            <div class="message-controls">
-                <div class="message-input-area">
-                    <textarea id="msg-input" placeholder="Escribe... (Enter envía)"></textarea>
-                    <button class="btn-send" onclick="handleSendMessage()">➤</button>
+            <div id="p2p-log" class="p2p-log">Esperando motor...</div>
+            <div class="p2p-body">
+                <div id="chat-window" class="chat-window"></div>
+                <div class="peer-ids">
+                    <div class="peer-id-box"><label>Tu ID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
+                    <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
                 </div>
+                <button class="btn-call" onclick="conectarLlamada()">📞 Llamar / Conectar</button>
+                <div class="message-controls">
+                    <div class="message-input-area">
+                        <textarea id="msg-input" placeholder="Escribe... (Enter envía)"></textarea>
+                        <button class="btn-send" onclick="handleSendMessage()">➤</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn-secondary" style="flex:1;" onclick="reiniciarId()">🔄 Reiniciar mi ID</button>
+                </div>
+            </div>
+        </div>
+        <!-- Contenido Contactos -->
+        <div id="p2p-tab-contacts" class="p2p-tab-content hidden">
+            <div style="padding: 15px;">
+                <h4 style="margin-top:0; color:var(--leaf-light);">👥 Mis Contactos</h4>
+                <ul id="contact-list" class="contact-list"></ul>
+                <div class="add-contact">
+                    <input type="text" id="contact-name" placeholder="Nombre">
+                    <input type="text" id="contact-id" placeholder="ID">
+                    <button class="btn-action" style="width:auto; padding:8px 15px;" onclick="addContact()">➕</button>
+                </div>
+                <p style="font-size:0.8rem; color:#aaa;">Haz clic en un contacto para copiar su ID al campo remoto.</p>
             </div>
         </div>
     </dialog>
 
-    <!-- ========== IFRAME: MOTOR P2P (INVISIBLE) ========== -->
+    <!-- IFRAME: MOTOR P2P -->
     <iframe id="p2p-engine" src="p2p-engine.html" style="width:0; height:0; border:0; position:absolute;"></iframe>
 
     <script>
-        // ========== CÓDIGO DE LA INTERFAZ PRINCIPAL ==========
+        // ========== VARIABLES GLOBALES ==========
         const p2pIframe = document.getElementById('p2p-engine');
         const chatWindow = document.getElementById('chat-window');
         const myPeerIdInput = document.getElementById('my-peer-id');
@@ -215,8 +240,43 @@
         const msgInput = document.getElementById('msg-input');
         const statusIndicator = document.getElementById('status-indicator');
         const statusText = document.getElementById('status-text');
+        const capaActualSpan = document.getElementById('capa-actual');
 
-        // --- Enviar comandos al motor (iframe) ---
+        // Almacenamiento de contactos
+        const CONTACTS_KEY = 'arbolapp_contacts';
+        let contacts = [];
+
+        // ========== GESTIÓN DE ID PERSISTENTE ==========
+        const ID_KEY = 'arbolapp_device_id';
+        function generarNuevoId() {
+            // Intenta usar crypto.randomUUID() si está disponible
+            if (window.crypto && window.crypto.randomUUID) {
+                return window.crypto.randomUUID();
+            }
+            // Fallback: random string
+            return 'user_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        }
+
+        function obtenerIdDispositivo() {
+            let id = localStorage.getItem(ID_KEY);
+            if (!id) {
+                id = generarNuevoId();
+                localStorage.setItem(ID_KEY, id);
+            }
+            return id;
+        }
+
+        function reiniciarId() {
+            if (confirm('¿Generar un nuevo ID? Esto reiniciará las conexiones actuales.')) {
+                const nuevoId = generarNuevoId();
+                localStorage.setItem(ID_KEY, nuevoId);
+                // Notificar al iframe que reinicie con el nuevo ID
+                enviarAlMotor('REINICIAR_CON_ID', { id: nuevoId });
+                // También actualizar el campo si el iframe responde con MI_ID
+            }
+        }
+
+        // ========== COMUNICACIÓN CON EL IFRAME ==========
         function enviarAlMotor(tipo, datos = {}) {
             if (p2pIframe && p2pIframe.contentWindow) {
                 p2pIframe.contentWindow.postMessage({ type: tipo, data: datos }, '*');
@@ -226,7 +286,16 @@
             }
         }
 
-        // --- Escuchar mensajes del motor ---
+        // Al cargar la página, enviamos el ID al iframe para que lo use
+        window.addEventListener('load', () => {
+            // Esperamos un poco a que el iframe esté listo
+            setTimeout(() => {
+                const miId = obtenerIdDispositivo();
+                enviarAlMotor('INIT', { id: miId });
+            }, 500);
+        });
+
+        // Escuchar mensajes del motor
         window.addEventListener('message', (event) => {
             const { type, data } = event.data;
 
@@ -239,6 +308,8 @@
                     remotePeerIdInput.value = data;
                     addSystemMessage(`📞 Llamada entrante de: ${data}`);
                     logP2P(`Llamada entrante de: ${data}`);
+                    // Cambiar a pestaña chat automáticamente
+                    switchP2PTab('chat');
                     break;
                 case 'CONEXION_ESTABLECIDA':
                     actualizarEstado('connected');
@@ -263,12 +334,12 @@
                     logP2P(data);
                     break;
                 case 'CAPA_ACTUAL':
-                    logP2P(`📡 Capa activa: ${data}`);
+                    capaActualSpan.innerText = data;
                     break;
             }
         });
 
-        // --- Funciones de UI ---
+        // ========== FUNCIONES DE UI DEL CHAT ==========
         function addMessage(text, type) {
             const div = document.createElement('div');
             div.className = `message msg-${type}`;
@@ -314,7 +385,10 @@
 
         function openP2P() {
             document.getElementById('p2p-modal').showModal();
+            // Asegurar que el ID esté actualizado
+            myPeerIdInput.value = obtenerIdDispositivo(); // provisional hasta que el iframe responda
             msgInput.focus();
+            loadContacts(); // cargar contactos al abrir
         }
         function closeP2P() { document.getElementById('p2p-modal').close(); }
 
@@ -341,18 +415,66 @@
             actualizarEstado('calling');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            if (msgInput) {
-                msgInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
-                });
-            }
-        });
+        // ========== PESTAÑAS DEL MODAL ==========
+        function switchP2PTab(tab) {
+            document.getElementById('tab-chat-btn').classList.toggle('active', tab === 'chat');
+            document.getElementById('tab-contacts-btn').classList.toggle('active', tab === 'contacts');
+            document.getElementById('p2p-tab-chat').classList.toggle('hidden', tab !== 'chat');
+            document.getElementById('p2p-tab-contacts').classList.toggle('hidden', tab !== 'contacts');
+            if (tab === 'contacts') loadContacts();
+        }
 
-        // ========== RESTO DE FUNCIONES (FEED, POSTS, CONTACTOS) ==========
+        // ========== FUNCIONES DE CONTACTOS ==========
+        function loadContacts() {
+            contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
+            renderContacts();
+        }
+
+        function renderContacts() {
+            const list = document.getElementById('contact-list');
+            if (!list) return;
+            list.innerHTML = '';
+            contacts.forEach((c, index) => {
+                const li = document.createElement('li');
+                li.className = 'contact-item';
+                li.onclick = (e) => {
+                    if (!e.target.classList.contains('btn-delete-contact')) {
+                        remotePeerIdInput.value = c.id;
+                        switchP2PTab('chat'); // volver a chat
+                    }
+                };
+                li.innerHTML = `
+                    <div class="contact-info">
+                        <span class="contact-name">${c.name}</span>
+                        <span class="contact-id">${c.id}</span>
+                    </div>
+                    <button class="btn-delete-contact" onclick="deleteContact(${index})" title="Borrar">🗑️</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function addContact() {
+            const name = document.getElementById('contact-name').value.trim();
+            const id = document.getElementById('contact-id').value.trim();
+            if (!name || !id) return alert("Completa nombre e ID");
+            contacts.push({ name, id });
+            localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+            document.getElementById('contact-name').value = '';
+            document.getElementById('contact-id').value = '';
+            renderContacts();
+        }
+
+        function deleteContact(index) {
+            if (confirm("¿Borrar contacto?")) {
+                contacts.splice(index, 1);
+                localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+                renderContacts();
+            }
+        }
+
+        // ========== RESTO DE FUNCIONES (FEED, POSTS) ==========
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
-        const CONTACTS_KEY = 'arbolapp_contacts';
-        let contacts = [];
         let currentFeedTab = 'my-posts';
 
         async function loadPostsData() {
@@ -387,23 +509,16 @@
 
         function clearLocalData() { if(confirm("¿Borrar locales?")) { localStorage.removeItem(LOCAL_STORAGE_KEY); loadMyPosts(); } }
 
-        function resetPeerId() {
-            if (confirm("¿Forzar nuevo ID P2P? Se borrará el actual y se recargará el motor.")) {
-                enviarAlMotor('RESTART');
-            }
-        }
-
-        const DEFAULT_SOURCES = [ /* ... tus fuentes RSS ... */ ];
+        const DEFAULT_SOURCES = [ /* tus fuentes */ ];
         let customSources = JSON.parse(localStorage.getItem('arbolapp_sources') || '[]');
 
-        function addSource() { /* ... */ }
-        async function loadBranches() { /* ... */ }
         function switchSidebarTab(tab, event) {
             document.querySelectorAll('.sidebar-content').forEach(e => e.style.display = 'none');
             document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
             document.getElementById('tab-' + tab).style.display = 'block';
             event.target.classList.add('active');
         }
+
         function switchFeedTab(tab, event) {
             currentFeedTab = tab;
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -411,51 +526,30 @@
             document.getElementById('feed-container').innerHTML = '<div class="loading-frog">🌱 Cargando...</div>';
             if (tab === 'my-posts') loadMyPosts(); else loadBranches();
         }
+
         async function loadMyPosts() {
             const container = document.getElementById('feed-container'); container.innerHTML = '';
             (await loadPostsData()).forEach(p => container.appendChild(createPostCard(p, true)));
         }
-        function createPostCard(post, isOwn) { /* ... (tu función existente) ... */ return card; }
 
-        function loadContacts() {
-            contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
-            renderContacts();
-        }
-        function renderContacts() {
-            const list = document.getElementById('contact-list'); if(!list) return;
-            list.innerHTML = '';
-            contacts.forEach((c, index) => {
-                const li = document.createElement('li');
-                li.className = 'contact-item';
-                li.onclick = (e) => { if(!e.target.classList.contains('btn-delete-contact')) selectContact(c.id); };
-                li.innerHTML = `<div class="contact-info"><span class="contact-name">${c.name}</span><span class="contact-id">${c.id}</span></div><button class="btn-delete-contact" onclick="deleteContact(${index})" title="Borrar">🗑️</button>`;
-                list.appendChild(li);
-            });
-        }
-        function addContact() {
-            const name = document.getElementById('contact-name').value.trim();
-            const id = document.getElementById('contact-id').value.trim();
-            if(!name || !id) return alert("Completa nombre e ID");
-            contacts.push({ name, id });
-            localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
-            document.getElementById('contact-name').value = ''; document.getElementById('contact-id').value = '';
-            renderContacts();
-        }
-        function deleteContact(index) {
-            if(confirm("¿Borrar contacto?")) { contacts.splice(index, 1); localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); renderContacts(); }
-        }
-        function selectContact(id) {
-            document.getElementById('remote-peer-id').value = id;
-            openP2P();
-            document.getElementById('msg-input').focus();
+        async function loadBranches() {
+            const container = document.getElementById('feed-container');
+            container.innerHTML = ''; // implementación abreviada
         }
 
-        async function generateAndDownloadRSS() { /* ... tu función RSS ... */ }
+        function createPostCard(post, isOwn) {
+            const card = document.createElement('article'); card.className = 'leaf-card';
+            // ... (tu función existente) ...
+            return card;
+        }
 
-        // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
             loadMyPosts();
-            loadContacts();
+            if (msgInput) {
+                msgInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+                });
+            }
         });
     </script>
 </body>
