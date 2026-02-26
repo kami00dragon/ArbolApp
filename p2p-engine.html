@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- Cargar ARtico (NO PeerJS) -->
+    <script src="https://cdn.jsdelivr.net/npm/@rtco/client@latest/dist/rtco.umd.min.js"></script>
+</head>
+<body style="margin:0; padding:0; background: #1a1a1a; color: #0f0; font-family: monospace; font-size: 11px; overflow: hidden;">
+    <div id="log" style="padding: 5px; height: 100vh; overflow-y: auto;">[ARtico Engine] Starting...</div>
+
+    <script>
+        // ===================================================
+        // MOTOR P2P (ARtico) - Corre dentro del iframe
+        // ===================================================
+        const logDiv = document.getElementById('log');
+        function log(msg) {
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            logDiv.innerHTML += `<div>[${time}] ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            // También enviar log a la página principal para mostrarlo en el modal
+            if (window.parent) {
+                window.parent.postMessage({ type: 'LOG', data: msg }, '*');
+            }
+        }
+
+        // --- Estado del motor ---
+        let rtco = null;          // Instancia de Artico
+        let rtcoCall = null;      // Llamada activa
+        let miId = null;
+        let idRemoto = null;
+        let bufferMensajes = [];
+
+        // --- Enviar mensajes a la página principal ---
+        function enviarAPrincipal(tipo, datos = null) {
+            if (window.parent) {
+                window.parent.postMessage({ type: tipo, data: datos }, '*');
+            }
+        }
+
+        // --- Inicializar ARtico ---
+        function iniciarArtico() {
+            log('Iniciando ARtico...');
+            try {
+                rtco = new Artico();
+
+                rtco.on('open', (id) => {
+                    miId = id;
+                    log(`✅ ARtico listo. ID: ${id}`);
+                    enviarAPrincipal('MI_ID', id);
+                });
+
+                rtco.on('call', (call) => {
+                    log(`📞 Llamada entrante de: ${call.peer}`);
+                    idRemoto = call.peer;
+                    enviarAPrincipal('LLAMADA_ENTRANTE', idRemoto);
+                    
+                    // Aceptar automáticamente la llamada
+                    rtcoCall = call;
+                    call.answer();
+                    configurarLlamada(call);
+                });
+
+                rtco.on('error', (err) => {
+                    log(`❌ Error ARtico: ${err.message}`);
+                    enviarAPrincipal('ERROR_P2P', err.message);
+                });
+            } catch (e) {
+                log(`❌ Error fatal: ${e.message}`);
+                enviarAPrincipal('ERROR_P2P', e.message);
+            }
+        }
+
+        // --- Configurar los eventos de una llamada (entrante o saliente) ---
+        function configurarLlamada(call) {
+            rtcoCall = call;
+            idRemoto = call.peer;
+
+            call.on('open', () => {
+                log('✅ Llamada establecida');
+                enviarAPrincipal('CONEXION_ESTABLECIDA');
+                
+                // Enviar mensajes pendientes
+                while (bufferMensajes.length) {
+                    const msg = bufferMensajes.shift();
+                    call.send(msg);
+                    log(`Mensaje enviado (buffer): ${msg}`);
+                }
+            });
+
+            call.on('data', (data) => {
+                log(`📨 Recibido: ${data}`);
+                enviarAPrincipal('MENSAJE_RECIBIDO', data);
+            });
+
+            call.on('close', () => {
+                log('🔒 Llamada cerrada');
+                rtcoCall = null;
+                idRemoto = null;
+                enviarAPrincipal('CONEXION_CERRADA');
+            });
+
+            call.on('error', (err) => {
+                log(`🔥 Error en llamada: ${err.message}`);
+                enviarAPrincipal('ERROR_P2P', err.message);
+            });
+        }
+
+        // --- Conectar a un peer remoto ---
+        function conectarA(idDestino) {
+            if (!rtco) {
+                log('ARtico no iniciado');
+                return;
+            }
+            if (idDestino === miId) {
+                log('No te conectes a ti mismo');
+                return;
+            }
+
+            log(`Intentando conectar a: ${idDestino}`);
+            idRemoto = idDestino;
+
+            try {
+                const call = rtco.call(idDestino);
+                configurarLlamada(call);
+            } catch (err) {
+                log(`Error al llamar: ${err.message}`);
+                enviarAPrincipal('ERROR_P2P', err.message);
+            }
+        }
+
+        // --- Enviar un mensaje (o encolarlo si no hay conexión) ---
+        function enviarMensaje(texto, destino) {
+            if (rtcoCall && rtcoCall.open) {
+                rtcoCall.send(texto);
+                log(`Mensaje enviado: ${texto}`);
+            } else {
+                log(`Mensaje en buffer (sin conexión): ${texto}`);
+                bufferMensajes.push(texto);
+                if (destino && destino !== idRemoto) {
+                    conectarA(destino);
+                }
+            }
+        }
+
+        // --- Escuchar comandos de la página principal ---
+        window.addEventListener('message', (event) => {
+            // Por seguridad, en producción verificar event.origin
+            const { type, data } = event.data;
+
+            switch (type) {
+                case 'ENVIAR_MENSAJE':
+                    enviarMensaje(data.texto, data.idRemoto);
+                    break;
+                case 'CONECTAR':
+                    conectarA(data.idRemoto);
+                    break;
+                case 'RESTART':
+                    log('🔄 Reiniciando motor...');
+                    if (rtco) rtco.destroy();
+                    rtco = null;
+                    rtcoCall = null;
+                    bufferMensajes = [];
+                    setTimeout(() => iniciarArtico(), 500);
+                    break;
+            }
+        });
+
+        // --- Arrancar ---
+        iniciarArtico();
+
+    </script>
+</body>
+</html>
