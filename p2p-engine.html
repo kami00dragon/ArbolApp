@@ -2,19 +2,17 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <!-- Capa 1: ARtico -->
-    <script src="https://cdn.jsdelivr.net/npm/@rtco/client@latest/dist/rtco.umd.min.js"></script>
-    <!-- Capa 2: simple-peer -->
-    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
-    <!-- Capa 3: PeerJS -->
+    <!-- Cargar las librerías P2P -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@rtco/client@latest/dist/rtco.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
 </head>
 <body style="margin:0; padding:0; background: #1a1a1a; color: #0f0; font-family: monospace; font-size: 11px; overflow: hidden;">
     <div id="log" style="padding: 5px; height: 100vh; overflow-y: auto;">[Motor] Iniciando...</div>
 
     <script>
         // ============================================================
-        // MOTOR P2P CON 3 CAPAS + ID PERSISTENTE
+        // MOTOR P2P (recibe ID desde la página principal)
         // ============================================================
         const logDiv = document.getElementById('log');
         function log(msg) {
@@ -26,43 +24,8 @@
             }
         }
 
-        // --- GENERAR ID PERSISTENTE (localStorage + fallback) ---
-        function generarIdPersistente() {
-            const STORAGE_KEY = 'arbolapp_device_id';
-            let id = localStorage.getItem(STORAGE_KEY);
-            
-            if (!id) {
-                // Intentar con canvas fingerprinting como fallback [citation:5]
-                try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    ctx.textBaseline = 'top';
-                    ctx.font = '14px Arial';
-                    ctx.fillStyle = '#f60';
-                    ctx.fillRect(125, 1, 62, 20);
-                    ctx.fillStyle = '#069';
-                    ctx.fillText('ArbolApp', 2, 15);
-                    const fingerprint = canvas.toDataURL();
-                    id = btoa(fingerprint).substring(0, 16);
-                } catch (e) {
-                    // Fallback a random UUID
-                    id = 'user_' + Math.random().toString(36).substring(2, 10);
-                }
-                
-                // Guardar en localStorage para futuras visitas
-                try {
-                    localStorage.setItem(STORAGE_KEY, id);
-                } catch (e) {
-                    log('⚠️ localStorage no disponible, ID será temporal');
-                }
-            }
-            return id;
-        }
-
-        const MI_ID = generarIdPersistente();
-        log(`🔑 ID persistente: ${MI_ID}`);
-
-        // --- Estado del motor ---
+        // --- Variables de estado ---
+        let miId = null;
         let capaActiva = 0; // 0: ninguna, 1: ARtico, 2: simple-peer, 3: PeerJS
         let conexionActiva = null;
         let idRemoto = null;
@@ -76,105 +39,82 @@
             }
         }
 
-        // --- Notificar capa activa ---
-        function setCapaActiva(num, nombre) {
-            capaActiva = num;
-            enviarAPrincipal('CAPA_ACTUAL', `${nombre} (capa ${num})`);
-            log(`📡 Capa activa: ${nombre}`);
+        // --- Inicialización con ID recibido ---
+        function iniciarConId(id) {
+            miId = id;
+            log(`🔑 ID asignado por la página: ${miId}`);
+            enviarAPrincipal('MI_ID', miId);
+
+            // Intentar capa 1: ARtico (si está disponible)
+            if (typeof Artico !== 'undefined') {
+                iniciarArtico();
+            } else if (typeof Peer !== 'undefined') {
+                iniciarPeerJS();
+            } else {
+                log('❌ Ninguna librería P2P disponible');
+                enviarAPrincipal('ERROR_P2P', 'No hay librerías P2P');
+            }
         }
 
-        // ========== CAPA 1: ARtico ==========
+        // --- Capa 1: ARtico ---
         function iniciarArtico() {
-            setCapaActiva(1, 'ARtico');
-            
-            if (typeof Artico === 'undefined') {
-                log('❌ ARtico no disponible, pasando a capa 2');
-                iniciarSimplePeer();
-                return;
-            }
+            capaActiva = 1;
+            enviarAPrincipal('CAPA_ACTUAL', 'ARtico (capa 1)');
+            log('📡 Capa 1: ARtico');
 
             try {
-                const rtco = new Artico(MI_ID); // Usar ID persistente
+                const rtco = new Artico(miId);
 
                 rtco.on('open', (id) => {
                     log(`✅ ARtico listo. ID: ${id}`);
-                    enviarAPrincipal('MI_ID', id);
                 });
 
                 rtco.on('call', (call) => {
                     log(`📞 Llamada ARtico entrante de: ${call.peer}`);
                     idRemoto = call.peer;
                     enviarAPrincipal('LLAMADA_ENTRANTE', idRemoto);
-                    
                     call.answer();
-                    configurarConexion(call, 1);
+                    configurarConexion(call);
                 });
 
                 rtco.on('error', (err) => {
                     log(`❌ Error ARtico: ${err.message}`);
-                    log('⬇️ Cambiando a capa 2 (simple-peer)');
-                    iniciarSimplePeer();
+                    log('⬇️ Cambiando a capa 3 (PeerJS)');
+                    iniciarPeerJS();
                 });
 
-                // Guardar para usar en llamadas salientes
                 callbacks.rtco = rtco;
             } catch (e) {
                 log(`❌ Excepción ARtico: ${e.message}`);
-                iniciarSimplePeer();
-            }
-        }
-
-        // ========== CAPA 2: simple-peer (con servidores STUN) ==========
-        function iniciarSimplePeer() {
-            setCapaActiva(2, 'simple-peer');
-            
-            if (typeof SimplePeer === 'undefined') {
-                log('❌ simple-peer no disponible, pasando a capa 3');
                 iniciarPeerJS();
-                return;
             }
-
-            // simple-peer no tiene servidor de señalización, necesitamos postMessage
-            // pero como estamos en iframe, la señalización la maneja la UI principal
-            // En este modelo, simple-peer será solo para cuando el otro también use simple-peer
-            // y compartamos señales via postMessage (implementación más compleja)
-            
-            // Por simplicidad, pasamos directamente a PeerJS que tiene señalización integrada
-            log('⚠️ simple-peer requiere señalización externa, pasando a capa 3');
-            iniciarPeerJS();
         }
 
-        // ========== CAPA 3: PeerJS ==========
+        // --- Capa 3: PeerJS (directo) ---
         function iniciarPeerJS() {
-            setCapaActiva(3, 'PeerJS');
-            
-            if (typeof Peer === 'undefined') {
-                log('❌ PeerJS no disponible, modo fallback offline');
-                enviarAPrincipal('ERROR_P2P', 'Ninguna capa disponible');
-                return;
-            }
+            capaActiva = 3;
+            enviarAPrincipal('CAPA_ACTUAL', 'PeerJS (capa 3)');
+            log('📡 Capa 3: PeerJS');
 
             const config = {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' }
                 ]
             };
 
             try {
-                const peer = new Peer(MI_ID, config); // Usar ID persistente
+                const peer = new Peer(miId, config);
 
                 peer.on('open', (id) => {
                     log(`✅ PeerJS listo. ID: ${id}`);
-                    enviarAPrincipal('MI_ID', id);
                 });
 
                 peer.on('connection', (conn) => {
                     log(`📞 Llamada PeerJS entrante de: ${conn.peer}`);
                     idRemoto = conn.peer;
                     enviarAPrincipal('LLAMADA_ENTRANTE', idRemoto);
-                    configurarConexion(conn, 3);
+                    configurarConexion(conn);
                 });
 
                 peer.on('error', (err) => {
@@ -189,14 +129,13 @@
             }
         }
 
-        // --- Configurar conexión (genérico para cualquier capa) ---
-        function configurarConexion(conn, capa) {
+        // --- Configurar conexión (genérico) ---
+        function configurarConexion(conn) {
             conexionActiva = conn;
 
             conn.on('open', () => {
                 log('✅ Conexión establecida');
                 enviarAPrincipal('CONEXION_ESTABLECIDA');
-                
                 while (bufferMensajes.length) {
                     const msg = bufferMensajes.shift();
                     conn.send(msg);
@@ -222,26 +161,25 @@
             });
         }
 
-        // --- Conectar según capa activa ---
+        // --- Conectar a un peer ---
         function conectarA(destino) {
-            if (destino === MI_ID) {
+            if (destino === miId) {
                 log('No te conectes a ti mismo');
                 return;
             }
-
             idRemoto = destino;
             log(`Intentando conectar a: ${destino} (capa ${capaActiva})`);
 
             if (capaActiva === 1 && callbacks.rtco) {
                 try {
                     const call = callbacks.rtco.call(destino);
-                    configurarConexion(call, 1);
+                    configurarConexion(call);
                 } catch (err) {
                     log(`Error llamada ARtico: ${err.message}`);
                 }
             } else if (capaActiva === 3 && callbacks.peer) {
                 const conn = callbacks.peer.connect(destino, { reliable: true });
-                configurarConexion(conn, 3);
+                configurarConexion(conn);
             } else {
                 log('No hay capa activa para conectar');
             }
@@ -261,16 +199,17 @@
             }
         }
 
-        // --- Reiniciar motor (forzar nuevo ID) ---
-        function reiniciarMotor() {
-            log('🔄 Reiniciando motor...');
-            // Borrar ID guardado
-            try {
-                localStorage.removeItem('arbolapp_device_id');
-            } catch (e) {}
-            
-            // Recargar la página del iframe
-            location.reload();
+        // --- Reiniciar con nuevo ID ---
+        function reiniciarConId(nuevoId) {
+            log(`🔄 Reiniciando motor con nuevo ID: ${nuevoId}`);
+            // Cerrar conexiones
+            if (conexionActiva && typeof conexionActiva.close === 'function') conexionActiva.close();
+            if (callbacks.rtco) callbacks.rtco.destroy();
+            if (callbacks.peer) callbacks.peer.destroy();
+            callbacks = {};
+            bufferMensajes = [];
+            // Iniciar de nuevo
+            iniciarConId(nuevoId);
         }
 
         // --- Escuchar comandos de la página principal ---
@@ -278,27 +217,23 @@
             const { type, data } = event.data;
 
             switch (type) {
+                case 'INIT':
+                    iniciarConId(data.id);
+                    break;
                 case 'ENVIAR_MENSAJE':
                     enviarMensaje(data.texto, data.idRemoto);
                     break;
                 case 'CONECTAR':
                     conectarA(data.idRemoto);
                     break;
-                case 'RESTART':
-                    reiniciarMotor();
+                case 'REINICIAR_CON_ID':
+                    reiniciarConId(data.id);
                     break;
             }
         });
 
-        // --- Iniciar con capa 1 (ARtico) ---
-        iniciarArtico();
-
-        // Enviar ID inicial (por si ARtico falla rápido, al menos mostramos algo)
-        setTimeout(() => {
-            if (!document.getElementById('my-peer-id')?.value) {
-                enviarAPrincipal('MI_ID', MI_ID);
-            }
-        }, 1000);
+        // Esperar instrucciones de la página principal (el ID)
+        log('Esperando ID desde la página principal...');
     </script>
 </body>
 </html>
