@@ -21,6 +21,7 @@
         let conectado = false;
         let idRemoto = null;
         let bufferMensajes = [];
+        let reconectarTimeout = null;
 
         function enviarAPrincipal(tipo, datos) {
             if (window.parent) window.parent.postMessage({ type: tipo, data: datos }, '*');
@@ -31,30 +32,43 @@
             log(`🔑 ID: ${miId}`);
             enviarAPrincipal('MI_ID', miId);
 
-            const brokerUrl = 'wss://broker.hivemq.com:8000/mqtt';
-            log('📡 Conectando a broker MQTT...');
-            cliente = mqtt.connect(brokerUrl);
+            // Usamos broker público de Mosquitto (más fiable)
+            const brokerUrl = 'wss://test.mosquitto.org:8081/mqtt';
+            log('📡 Conectando a broker Mosquitto...');
+            
+            if (cliente) {
+                cliente.end(true);
+            }
+
+            cliente = mqtt.connect(brokerUrl, {
+                reconnectPeriod: 5000, // Reintentar cada 5 segundos
+                connectTimeout: 30000,
+                keepalive: 60
+            });
 
             cliente.on('connect', () => {
-                log('✅ Conectado al broker');
+                log('✅ Conectado al broker Mosquitto');
                 conectado = true;
-                enviarAPrincipal('CAPA_ACTUAL', 'MQTT');
+                enviarAPrincipal('CAPA_ACTUAL', 'MQTT (Mosquitto)');
                 const topic = `arbolapp/usuario/${miId}`;
                 cliente.subscribe(topic, (err) => {
                     if (err) log(`Error al suscribirse: ${err}`);
                     else log(`📡 Suscrito a ${topic}`);
                 });
+                // Enviar mensajes pendientes
                 while (bufferMensajes.length) {
                     const { texto, destino } = bufferMensajes.shift();
                     enviarMensajeMQTT(texto, destino);
                 }
+                // Notificar conexión establecida (simulada)
+                enviarAPrincipal('CONEXION_ESTABLECIDA');
             });
 
             cliente.on('message', (topic, message) => {
                 const payload = message.toString();
                 try {
                     const datos = JSON.parse(payload);
-                    if (datos.sender === miId) return;
+                    if (datos.sender === miId) return; // ignorar propios
                     log(`📨 Recibido de ${datos.sender}: ${datos.text}`);
                     enviarAPrincipal('MENSAJE_RECIBIDO', datos.text);
                     if (!idRemoto) {
@@ -67,19 +81,27 @@
             });
 
             cliente.on('error', (err) => {
-                log(`❌ Error MQTT: ${err}`);
-                enviarAPrincipal('ERROR_P2P', err.toString());
+                log(`❌ Error MQTT: ${err.message}`);
+                enviarAPrincipal('ERROR_P2P', err.message);
+                conectado = false;
             });
 
             cliente.on('close', () => {
                 log('🔌 Desconectado del broker');
                 conectado = false;
                 enviarAPrincipal('CONEXION_CERRADA');
+                // Intentar reconectar después de un tiempo (ya lo hace mqtt.js automáticamente con reconnectPeriod)
+            });
+
+            cliente.on('offline', () => {
+                log('📴 Modo offline');
+                conectado = false;
             });
         }
 
         function enviarMensajeMQTT(texto, destino) {
             if (!cliente || !conectado) {
+                log('No conectado, guardando en buffer');
                 bufferMensajes.push({ texto, destino });
                 return;
             }
@@ -96,13 +118,18 @@
         }
 
         function iniciarConId(id) {
-            if (cliente) cliente.end();
+            if (cliente) {
+                cliente.end(true);
+            }
+            bufferMensajes = [];
             conectarMQTT(id);
         }
 
         function reiniciarConId(nuevoId) {
             log(`🔄 Reiniciando con nuevo ID: ${nuevoId}`);
-            if (cliente) cliente.end();
+            if (cliente) {
+                cliente.end(true);
+            }
             bufferMensajes = [];
             conectarMQTT(nuevoId);
         }
@@ -114,7 +141,9 @@
 
         function conectar(destino) {
             idRemoto = destino;
-            enviarAPrincipal('CONEXION_ESTABLECIDA');
+            log(`Objetivo establecido: ${destino}`);
+            // No necesitamos hacer nada más, ya estamos suscritos a nuestro topic
+            // Pero podemos enviar un mensaje de presencia si se desea
         }
 
         window.addEventListener('message', (event) => {
