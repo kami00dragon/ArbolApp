@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
-    
+    <!-- Librería MQTT para mensajería -->
+    <script src="https://unpkg.com/mqtt@5.0.5/dist/mqtt.min.js"></script>
     <style>
-        /* ========== TUS ESTILOS COMPLETOS (sin cambios) ========== */
+        /* ========== ESTILOS COMPLETOS (sin cambios, los mismos de siempre) ========== */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -123,7 +124,6 @@
         .btn-call:hover { background: #1976D2; }
         .btn-call:disabled { background: #4a6b8f; cursor: not-allowed; }
 
-        /* Contactos en modal */
         .contact-list { list-style: none; padding: 0; margin: 10px 0; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 5px; }
         .contact-item { background: rgba(0,0,0,0.2); padding: 8px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #5d4037; cursor: pointer; }
         .contact-item:hover { background: rgba(0,0,0,0.4); border-color: var(--leaf-green); }
@@ -207,7 +207,7 @@
                         <h1>🌳 ArbolApp</h1>
                         <span class="subtitle">Red Social Estática y Cifrada</span>
                     </div>
-                    <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes P2P</button>
+                    <button class="btn-p2p-header" onclick="openP2P()">🔒 Mensajes</button>
                 </header>
                 <nav class="nav-branches">
                     <button class="nav-btn active" onclick="switchFeedTab('my-posts', event)">Mis Hojas</button>
@@ -246,12 +246,12 @@
                 <span id="status-text">Desconectado</span>
                 <span style="flex:1; text-align:right; font-size:0.7rem;" id="capa-actual">MQTT</span>
             </div>
-            <div id="p2p-log" class="p2p-log">Esperando motor...</div>
+            <div id="p2p-log" class="p2p-log">Iniciando sistema de mensajería...</div>
             <div class="p2p-body">
                 <div id="chat-window" class="chat-window"></div>
                 <div class="peer-ids">
                     <div class="peer-id-box"><label>Tu ID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
-                    <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
+                    <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="clearRemoteId()">✕</button></div></div>
                 </div>
                 <button class="btn-call" onclick="conectarLlamada()">📞 Conectar</button>
                 <div class="message-controls">
@@ -265,7 +265,7 @@
                 </div>
             </div>
         </div>
-        <!-- Contenido Contactos (dentro del modal) -->
+        <!-- Contenido Contactos -->
         <div id="p2p-tab-contacts" class="p2p-tab-content hidden">
             <div style="padding: 15px;">
                 <h4 style="margin-top:0; color:var(--leaf-light);">👥 Mis Contactos</h4>
@@ -280,12 +280,8 @@
         </div>
     </dialog>
 
-    <!-- IFRAME: MOTOR MQTT (invisible) -->
-    <iframe id="p2p-engine" src="mqtt-engine.html" style="width:0; height:0; border:0; position:absolute;"></iframe>
-
     <script>
         // ========== VARIABLES GLOBALES ==========
-        const p2pIframe = document.getElementById('p2p-engine');
         const chatWindow = document.getElementById('chat-window');
         const myPeerIdInput = document.getElementById('my-peer-id');
         const remotePeerIdInput = document.getElementById('remote-peer-id');
@@ -293,9 +289,19 @@
         const statusIndicator = document.getElementById('status-indicator');
         const statusText = document.getElementById('status-text');
         const capaActualSpan = document.getElementById('capa-actual');
+        const p2pLog = document.getElementById('p2p-log');
 
         const CONTACTS_KEY = 'arbolapp_contacts';
         let contacts = [];
+
+        // ========== VARIABLES MQTT ==========
+        let mqttClient = null;
+        let miId = null;
+        let idRemoto = null;
+        let bufferMensajes = [];
+        let conectadoMQTT = false;
+        let reintentosMQTT = 0;
+        const MAX_REINTENTOS = 5;
 
         // ========== GESTIÓN DE ID PERSISTENTE ==========
         const ID_KEY = 'arbolapp_device_id';
@@ -315,81 +321,29 @@
             return id;
         }
 
-        // ========== FUNCIÓN REINICIAR ID ==========
         function reiniciarId() {
             if (confirm('¿Generar un nuevo ID? Esto reiniciará las conexiones actuales.')) {
                 const nuevoId = generarNuevoId();
                 localStorage.setItem(ID_KEY, nuevoId);
-                enviarAlMotor('REINICIAR_CON_ID', { id: nuevoId });
+                // Desconectar y reconectar con nuevo ID
+                if (mqttClient) {
+                    mqttClient.end();
+                }
+                iniciarMQTT(nuevoId);
             }
         }
 
-        // ========== COMUNICACIÓN CON EL IFRAME ==========
-        function enviarAlMotor(tipo, datos = {}) {
-            if (p2pIframe && p2pIframe.contentWindow) {
-                p2pIframe.contentWindow.postMessage({ type: tipo, data: datos }, '*');
-            } else {
-                console.error('Motor no disponible');
-                addSystemMessage('⚠️ Error: Motor no iniciado');
-            }
+        function clearRemoteId() {
+            remotePeerIdInput.value = '';
         }
 
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const miId = obtenerIdDispositivo();
-                enviarAlMotor('INIT', { id: miId });
-            }, 500);
-        });
-
-        window.addEventListener('message', (event) => {
-            const { type, data } = event.data;
-
-            switch (type) {
-                case 'MI_ID':
-                    myPeerIdInput.value = data;
-                    logP2P(`✅ ID asignado: ${data}`);
-                    break;
-                case 'LLAMADA_ENTRANTE':
-                    remotePeerIdInput.value = data;
-                    addSystemMessage(`📞 Llamada entrante de: ${data}`);
-                    logP2P(`Llamada entrante de: ${data}`);
-                    switchP2PTab('chat');
-                    break;
-                case 'CONEXION_ESTABLECIDA':
-                    actualizarEstado('connected');
-                    addSystemMessage('✅ Conectado');
-                    logP2P('Conexión establecida');
-                    break;
-                case 'CONEXION_CERRADA':
-                    actualizarEstado('idle');
-                    addSystemMessage('🔌 Desconectado');
-                    logP2P('Conexión cerrada');
-                    break;
-                case 'MENSAJE_RECIBIDO':
-                    addMessage(data, 'received');
-                    logP2P('Mensaje recibido');
-                    break;
-                case 'ERROR_P2P':
-                    actualizarEstado('idle');
-                    addSystemMessage(`⚠️ Error: ${data}`);
-                    logP2P(`ERROR: ${data}`);
-                    break;
-                case 'LOG':
-                    logP2P(data);
-                    break;
-                case 'CAPA_ACTUAL':
-                    capaActualSpan.innerText = data;
-                    break;
-            }
-        });
-
-        // ========== FUNCIONES DE UI DEL CHAT ==========
-        function addMessage(text, type) {
-            const div = document.createElement('div');
-            div.className = `message msg-${type}`;
-            div.innerText = text;
-            chatWindow.appendChild(div);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+        // ========== FUNCIONES DE LOG ==========
+        function logP2P(mensaje) {
+            if (!p2pLog) return;
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            p2pLog.innerHTML += `<div>[${time}] ${mensaje}</div>`;
+            p2pLog.scrollTop = p2pLog.scrollHeight;
+            console.log('[MQTT]', mensaje);
         }
 
         function addSystemMessage(text) {
@@ -400,12 +354,12 @@
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        function logP2P(mensaje) {
-            const logDiv = document.getElementById('p2p-log');
-            if (!logDiv) return;
-            const time = new Date().toLocaleTimeString().split(' ')[0];
-            logDiv.innerHTML += `<div>[${time}] ${mensaje}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `message msg-${type}`;
+            div.innerText = text;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
         function actualizarEstado(estado) {
@@ -422,6 +376,155 @@
             }
         }
 
+        // ========== FUNCIONES MQTT ==========
+        function iniciarMQTT(id) {
+            miId = id;
+            myPeerIdInput.value = miId;
+            logP2P(`🔑 ID asignado: ${miId}`);
+            actualizarEstado('calling');
+            capaActualSpan.innerText = 'MQTT (conectando)';
+
+            const brokerUrl = 'wss://broker.hivemq.com:8000/mqtt';
+            logP2P(`📡 Conectando a broker MQTT: ${brokerUrl}`);
+
+            try {
+                mqttClient = mqtt.connect(brokerUrl);
+
+                mqttClient.on('connect', () => {
+                    logP2P('✅ Conectado al broker MQTT');
+                    conectadoMQTT = true;
+                    reintentosMQTT = 0;
+                    actualizarEstado('connected');
+                    capaActualSpan.innerText = 'MQTT';
+
+                    const topic = `arbolapp/usuario/${miId}`;
+                    mqttClient.subscribe(topic, (err) => {
+                        if (err) {
+                            logP2P(`❌ Error al suscribirse: ${err}`);
+                            addSystemMessage(`Error de suscripción: ${err}`);
+                        } else {
+                            logP2P(`📡 Suscrito a ${topic}`);
+                        }
+                    });
+
+                    // Enviar mensajes pendientes
+                    while (bufferMensajes.length) {
+                        const { texto, destino } = bufferMensajes.shift();
+                        enviarMensajeMQTT(texto, destino);
+                    }
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    const payload = message.toString();
+                    try {
+                        const datos = JSON.parse(payload);
+                        if (datos.sender === miId) return; // ignorar propios mensajes
+                        logP2P(`📨 Mensaje de ${datos.sender}: ${datos.text}`);
+                        addMessage(datos.text, 'received');
+                        if (!idRemoto && datos.sender !== miId) {
+                            idRemoto = datos.sender;
+                            remotePeerIdInput.value = idRemoto;
+                            addSystemMessage(`📞 Llamada entrante de: ${idRemoto}`);
+                        }
+                    } catch (e) {
+                        logP2P(`❌ Error parsing mensaje: ${e}`);
+                    }
+                });
+
+                mqttClient.on('error', (err) => {
+                    logP2P(`❌ Error MQTT: ${err}`);
+                    addSystemMessage(`Error MQTT: ${err}`);
+                    conectadoMQTT = false;
+                    actualizarEstado('idle');
+                });
+
+                mqttClient.on('close', () => {
+                    logP2P('🔌 Desconectado del broker');
+                    conectadoMQTT = false;
+                    actualizarEstado('idle');
+                    // Reintentar conexión si no es intencional
+                    if (reintentosMQTT < MAX_REINTENTOS) {
+                        reintentosMQTT++;
+                        logP2P(`🔄 Reintentando conexión (${reintentosMQTT}/${MAX_REINTENTOS})...`);
+                        setTimeout(() => {
+                            if (mqttClient) mqttClient.reconnect();
+                        }, 3000);
+                    } else {
+                        addSystemMessage('No se pudo reconectar al broker MQTT');
+                    }
+                });
+
+                // Timeout de conexión
+                setTimeout(() => {
+                    if (!conectadoMQTT) {
+                        logP2P('⏱️ Tiempo de espera agotado para conexión MQTT');
+                        addSystemMessage('No se pudo conectar al broker MQTT. Verifica tu conexión a internet.');
+                    }
+                }, 10000);
+
+            } catch (e) {
+                logP2P(`❌ Excepción al conectar MQTT: ${e}`);
+                addSystemMessage(`Error al iniciar MQTT: ${e}`);
+            }
+        }
+
+        function enviarMensajeMQTT(texto, destino) {
+            if (!mqttClient || !conectadoMQTT) {
+                logP2P(`📦 Buffer: mensaje para ${destino} (sin conexión)`);
+                bufferMensajes.push({ texto, destino });
+                addMessage(texto, 'pending');
+                return;
+            }
+            const topic = `arbolapp/usuario/${destino}`;
+            const mensaje = {
+                sender: miId,
+                text: texto,
+                timestamp: Date.now()
+            };
+            mqttClient.publish(topic, JSON.stringify(mensaje), { qos: 0 }, (err) => {
+                if (err) {
+                    logP2P(`❌ Error al publicar a ${destino}: ${err}`);
+                    addSystemMessage(`Error al enviar: ${err}`);
+                } else {
+                    logP2P(`✅ Mensaje enviado a ${destino}`);
+                    addMessage(texto, 'sent');
+                }
+            });
+        }
+
+        // ========== FUNCIONES DE INTERFAZ DE CHAT ==========
+        function handleSendMessage() {
+            const texto = msgInput.value.trim();
+            if (!texto) return;
+
+            const destino = remotePeerIdInput.value.trim();
+            if (!destino) {
+                addSystemMessage('⚠️ Debes ingresar un ID remoto');
+                return;
+            }
+
+            msgInput.value = '';
+            // El mensaje se añadirá cuando se confirme envío (en la callback de publish)
+            // Para feedback inmediato, lo mostramos como pendiente
+            addMessage(texto, 'pending');
+            enviarMensajeMQTT(texto, destino);
+            if (!idRemoto) idRemoto = destino;
+            actualizarEstado('calling');
+        }
+
+        function conectarLlamada() {
+            const destino = remotePeerIdInput.value.trim();
+            if (!destino) {
+                alert('Ingresa un ID remoto');
+                return;
+            }
+            idRemoto = destino;
+            addSystemMessage(`Conectando con ${destino}...`);
+            // En MQTT no hay "llamada", solo suscripción, pero notificamos
+            actualizarEstado('connected');
+            capaActualSpan.innerText = 'MQTT';
+        }
+
         function copyMyId() {
             myPeerIdInput.select();
             navigator.clipboard?.writeText(myPeerIdInput.value).then(() => alert("ID copiado")).catch(() => document.execCommand('copy'));
@@ -429,39 +532,19 @@
 
         function openP2P() {
             document.getElementById('p2p-modal').showModal();
-            myPeerIdInput.value = obtenerIdDispositivo();
+            // Si aún no hay cliente MQTT, iniciar
+            if (!mqttClient) {
+                const id = obtenerIdDispositivo();
+                iniciarMQTT(id);
+            } else {
+                myPeerIdInput.value = miId;
+            }
             msgInput.focus();
-            loadContactsModal(); // cargar contactos en la pestaña
+            loadContactsModal();
         }
 
         function closeP2P() {
             document.getElementById('p2p-modal').close();
-        }
-
-        function handleSendMessage() {
-            const texto = msgInput.value.trim();
-            if (!texto) return;
-
-            const idRemoto = remotePeerIdInput.value.trim();
-            if (!idRemoto) {
-                addSystemMessage('⚠️ Debes ingresar un ID remoto');
-                return;
-            }
-
-            msgInput.value = '';
-            addMessage(texto, 'pending');
-            enviarAlMotor('ENVIAR_MENSAJE', { texto, idRemoto });
-            actualizarEstado('calling');
-        }
-
-        function conectarLlamada() {
-            const idRemoto = remotePeerIdInput.value.trim();
-            if (!idRemoto) {
-                alert('Ingresa un ID remoto');
-                return;
-            }
-            enviarAlMotor('CONECTAR', { idRemoto });
-            actualizarEstado('calling');
         }
 
         // ========== PESTAÑAS DEL MODAL ==========
@@ -523,7 +606,6 @@
         }
 
         // ========== FUNCIONES DE LA SIDEBAR (contactos originales) ==========
-        // (Las mantenemos por compatibilidad, pero ahora usamos las del modal)
         function loadContacts() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContacts();
@@ -539,7 +621,7 @@
                 li.onclick = (e) => {
                     if (!e.target.classList.contains('btn-delete-contact')) {
                         remotePeerIdInput.value = c.id;
-                        openP2P(); // abrir modal y cambiar a chat
+                        openP2P();
                     }
                 };
                 li.innerHTML = `
@@ -572,7 +654,7 @@
             }
         }
 
-        // ========== FUNCIONES DE POSTS Y RSS (completas) ==========
+        // ========== FUNCIONES DE POSTS Y RSS (completas, igual que antes) ==========
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         let currentFeedTab = 'my-posts';
 
