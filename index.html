@@ -8,7 +8,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <!-- NUEVO: Script de Autenticación -->
+    <!-- Script de Autenticación -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
@@ -348,33 +348,47 @@
             p2pLog.scrollTop = p2pLog.scrollHeight;
         }
 
-        // ========== FUNCIÓN DE AUTENTICACIÓN Y CONEXIÓN ==========
+        // ========== FUNCIÓN DE AUTENTICACIÓN Y CONEXIÓN (MEJORADA) ==========
         function iniciarFirebase(id) {
             miId = id;
+            
+            // Log en pantalla Y en consola del navegador (F12)
+            console.log("🔵 [APP] Iniciando con ID:", miId);
             logP2P(`🔑 ID: ${miId}`);
             myPeerIdInput.value = miId;
 
-            if (app) {
-                app.delete();
+            // IMPORTANTE: Si la app ya existe, no la borramos ni la recreamos.
+            // Recrearla causaba errores silenciosos de "App already exists".
+            if (!app) {
+                try {
+                    app = firebase.initializeApp(firebaseConfig);
+                    db = firebase.database();
+                    console.log("✅ [APP] Firebase inicializado correctamente.");
+                } catch (e) {
+                    console.error("❌ [APP] Error inicializando Firebase:", e);
+                    logP2P("❌ Error crítico iniciando Firebase. Revisa la consola (F12).");
+                    return;
+                }
+            } else {
+                console.log("🔄 [APP] Reutilizando instancia existente de Firebase.");
             }
-            
-            app = firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
 
-            // AUTENTICACIÓN ANÓNIMA
+            // AUTENTICACIÓN
             firebase.auth().signInAnonymously()
                 .then(() => {
+                    console.log("✅ [AUTH] Usuario autenticado correctamente.");
                     logP2P('✅ Autenticado en Firebase');
                     configurarEscucha();
                 })
                 .catch((error) => {
-                    logP2P(`❌ Error de autenticación: ${error.message}`);
-                    console.error(error);
+                    console.error("❌ [AUTH] Error de autenticación:", error);
+                    logP2P(`❌ Error de auth: ${error.message}`);
                 });
         }
 
         // Configura los listeners de base de datos DESPUÉS de autenticarse
         function configurarEscucha() {
+            console.log("👂 [LISTEN] Configurando escucha en:", 'mensajes/' + miId);
             inboxRef = db.ref('mensajes/' + miId);
 
             if (escuchando) inboxRef.off();
@@ -383,7 +397,12 @@
                 const mensaje = snapshot.val();
                 
                 // Ignorar mensajes propios (por seguridad)
-                if (mensaje.sender === miId) return;
+                if (mensaje.sender === miId) {
+                    console.log("🚫 [LISTEN] Mensaje propio ignorado.");
+                    return;
+                }
+
+                console.log("📨 [RECEIVE] Mensaje recibido de:", mensaje.sender, "Tipo:", mensaje.tipo);
 
                 // Si es una llamada (tipo "call")
                 if (mensaje.tipo === 'call') {
@@ -423,10 +442,19 @@
             logP2P('✅ Escuchando mensajes...');
         }
 
-        // Función mejorada que acepta tipo de mensaje
+        // ========== FUNCIÓN DE ENVÍO (MEJORADA) ==========
         function enviarMensajeFirebase(texto, destino, tipo = 'text') {
+            // 1. Verificación de base de datos
             if (!db) {
+                console.warn("⚠️ [SEND] DB no lista. Guardando en buffer.");
                 bufferMensajes.push({ texto, destino });
+                return;
+            }
+
+            // 2. Verificación del destino (ID Remoto)
+            if (!destino) {
+                console.error("❌ [SEND] Intento de envío SIN DESTINO.");
+                alert("⚠️ Error: No has ingresado el ID del destinatario en la casilla 'ID Remoto'.");
                 return;
             }
 
@@ -437,12 +465,24 @@
                 tipo: tipo
             };
 
+            console.log(`📤 [SEND] Enviando a ${destino}. Tipo: ${tipo}`);
+
+            // 3. Intento de escritura en Firebase
             db.ref('mensajes/' + destino).push(mensaje)
                 .then(() => {
+                    console.log(`✅ [SEND] Éxito al enviar a ${destino}`);
                     if (tipo === 'text') logP2P(`Mensaje enviado a ${destino}`);
                     else logP2P(`📞 Llamada enviada a ${destino}`);
                 })
-                .catch(err => logP2P(`Error al enviar: ${err}`));
+                .catch((err) => {
+                    console.error("❌ [SEND] Error Firebase:", err);
+                    // Si el error es de permisos, lo mostramos claro
+                    if (err.code === 'PERMISSION_DENIED') {
+                        logP2P(`❌ Permiso denegado. Revisa las Reglas de Firebase.`);
+                    } else {
+                        logP2P(`Error al enviar: ${err.message}`);
+                    }
+                });
         }
 
         // Función para enviar una llamada (presencia)
@@ -457,7 +497,7 @@
             logP2P(`🔄 Reiniciando con nuevo ID: ${nuevoId}`);
             if (app) {
                 app.delete();
-                app = null;
+                app = null; // IMPORTANTE: Resetear la variable
                 db = null;
                 escuchando = false;
             }
@@ -518,7 +558,7 @@
 
             const destino = remotePeerIdInput.value.trim();
             if (!destino) {
-                addSystemMessage('⚠️ Debes ingresar un ID remoto');
+                alert("⚠️ Debes ingresar el ID remoto");
                 return;
             }
 
@@ -536,11 +576,18 @@
 
         function conectarLlamada() {
             const destino = remotePeerIdInput.value.trim();
+            
+            console.log("📞 [CALL] Botón Llamar pulsado. Destino en casilla:", destino);
+            
             if (!destino) {
-                alert('Ingresa un ID remoto');
+                alert('⚠️ Debes escribir o pegar el ID del otro dispositivo en la casilla "ID Remoto" antes de llamar.');
+                // Foco en la casilla para facilitar
+                remotePeerIdInput.focus();
                 return;
             }
+            
             idRemoto = destino;
+            console.log(`📞 [CALL] Iniciando llamada hacia ${destino}`);
             enviarPresencia(destino);
         }
 
