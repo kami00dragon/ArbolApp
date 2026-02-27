@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArbolApp - Red Social Libre</title>
     
-    <!-- Firebase SDK (cargado globalmente para todo el script) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <style>
-        /* ========== TUS ESTILOS COMPLETOS (los mismos de la versión anterior) ========== */
+        /* ========== ESTILOS COMPLETOS (sin omitir nada) ========== */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -150,7 +150,7 @@
 </head>
 <body>
     <div class="app-layout">
-        <!-- SIDEBAR (editor y datos) -->
+        <!-- SIDEBAR (completo) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🌱 ArbolApp</h2>
@@ -215,7 +215,7 @@
                 </header>
                 <nav class="nav-branches">
                     <button class="nav-btn active" onclick="switchFeedTab('my-posts', event)">Mis Hojas</button>
-                    <button class="nav-btn" onclick="switchFeedTab('branches', event)">Ramas (RSS)</button>
+                    <button class="nav-btn" onclick="switchFeedTab('branches', event)">Ramas (RSS/Mastodon)</button>
                 </nav>
                 <div id="feed-container">
                     <div class="loading-frog">🌱 Cargando...</div>
@@ -257,7 +257,7 @@
                     <div class="peer-id-box"><label>Tu ID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
                     <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
                 </div>
-                <button class="btn-call" onclick="conectarLlamada()">📞 Conectar</button>
+                <button class="btn-call" onclick="conectarLlamada()">📞 Llamar</button>
                 <div class="message-controls">
                     <div class="message-input-area">
                         <textarea id="msg-input" placeholder="Escribe... (Enter envía)"></textarea>
@@ -296,7 +296,6 @@
             appId: "1:151816184751:web:777e49d8ab78343af3455a"
         };
 
-        // Inicializar Firebase (se hará más tarde con el ID)
         let app = null;
         let db = null;
         let inboxRef = null;
@@ -351,26 +350,33 @@
             myPeerIdInput.value = miId;
 
             if (app) {
-                app.delete(); // reiniciar conexión
+                app.delete();
             }
             app = firebase.initializeApp(firebaseConfig);
             db = firebase.database();
 
             inboxRef = db.ref('mensajes/' + miId);
 
-            // Escuchar mensajes entrantes
-            if (escuchando) inboxRef.off(); // quitar listener anterior
+            if (escuchando) inboxRef.off();
             inboxRef.on('child_added', (snapshot) => {
                 const mensaje = snapshot.val();
                 if (mensaje.sender === miId) return;
 
-                logP2P(`📨 Recibido de ${mensaje.sender}: ${mensaje.text}`);
-                addMessage(mensaje.text, 'received');
-
-                if (!idRemoto) {
+                // Si es una llamada (tipo "call")
+                if (mensaje.tipo === 'call') {
+                    logP2P(`📞 Llamada entrante de: ${mensaje.sender}`);
+                    remotePeerIdInput.value = mensaje.sender;
                     idRemoto = mensaje.sender;
-                    remotePeerIdInput.value = idRemoto;
                     addSystemMessage(`📞 Llamada entrante de: ${idRemoto}`);
+                } else {
+                    // Mensaje de texto normal
+                    logP2P(`📨 Recibido de ${mensaje.sender}: ${mensaje.text}`);
+                    addMessage(mensaje.text, 'received');
+                    if (!idRemoto) {
+                        idRemoto = mensaje.sender;
+                        remotePeerIdInput.value = idRemoto;
+                        addSystemMessage(`📞 Primer mensaje de: ${idRemoto}`);
+                    }
                 }
 
                 // Eliminar mensaje después de leerlo (opcional)
@@ -381,15 +387,16 @@
             // Enviar mensajes pendientes
             while (bufferMensajes.length) {
                 const { texto, destino } = bufferMensajes.shift();
-                enviarMensajeFirebase(texto, destino);
+                enviarMensajeFirebase(texto, destino, 'text');
             }
 
-            actualizarEstado('connected');
+            actualizarEstado('idle');
             capaActualSpan.innerText = 'Firebase';
             logP2P('✅ Conectado a Firebase');
         }
 
-        function enviarMensajeFirebase(texto, destino) {
+        // Función mejorada que acepta tipo de mensaje
+        function enviarMensajeFirebase(texto, destino, tipo = 'text') {
             if (!db) {
                 bufferMensajes.push({ texto, destino });
                 return;
@@ -398,12 +405,24 @@
             const mensaje = {
                 sender: miId,
                 text: texto,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                tipo: tipo
             };
 
             db.ref('mensajes/' + destino).push(mensaje)
-                .then(() => logP2P(`Mensaje enviado a ${destino}`))
+                .then(() => {
+                    if (tipo === 'text') logP2P(`Mensaje enviado a ${destino}`);
+                    else logP2P(`📞 Llamada enviada a ${destino}`);
+                })
                 .catch(err => logP2P(`Error al enviar: ${err}`));
+        }
+
+        // Función para enviar una llamada (presencia)
+        function enviarPresencia(destino) {
+            if (!destino) return;
+            enviarMensajeFirebase('', destino, 'call');
+            addSystemMessage(`📞 Llamando a ${destino}...`);
+            actualizarEstado('calling');
         }
 
         function reiniciarConexion(nuevoId) {
@@ -418,7 +437,7 @@
             iniciarFirebase(nuevoId);
         }
 
-        // ========== FUNCIONES DE UI ==========
+        // ========== FUNCIONES DE UI DEL CHAT ==========
         function addMessage(text, type) {
             const div = document.createElement('div');
             div.className = `message msg-${type}`;
@@ -481,8 +500,10 @@
                 bufferMensajes.push({ texto, destino });
                 iniciarFirebase(obtenerIdDispositivo());
             } else {
-                enviarMensajeFirebase(texto, destino);
+                enviarMensajeFirebase(texto, destino, 'text');
             }
+            actualizarEstado('connected');
+            idRemoto = destino;
         }
 
         function conectarLlamada() {
@@ -492,8 +513,7 @@
                 return;
             }
             idRemoto = destino;
-            addSystemMessage(`Conectado con ${destino} (simulado)`);
-            actualizarEstado('connected');
+            enviarPresencia(destino);
         }
 
         function reiniciarId() {
@@ -562,7 +582,7 @@
             }
         }
 
-        // ========== FUNCIONES SIDEBAR (contactos) ==========
+        // ========== FUNCIONES DE LA SIDEBAR (contactos) ==========
         function loadContacts() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContacts();
@@ -611,7 +631,7 @@
             }
         }
 
-        // ========== FUNCIONES DE POSTS Y RSS (sin cambios) ==========
+        // ========== FUNCIONES DE POSTS Y RSS (completas) ==========
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         let currentFeedTab = 'my-posts';
 
@@ -620,7 +640,9 @@
             try {
                 const response = await fetch('posts.json');
                 if (response.ok) serverPosts = await response.json();
-            } catch (e) {}
+            } catch (e) {
+                console.log("No posts.json found.");
+            }
             let localPosts = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
             const serverIds = new Set(serverPosts.map(p => p.id));
             const uniqueLocalPosts = localPosts.filter(p => !serverIds.has(p.id));
@@ -768,7 +790,12 @@
                 const m = post.content.match(/src="([^"]+)"/);
                 media = m ? `<div class="media-container"><img src="${m[1]}"></div>` : `<div class="media-container"><img src="https://picsum.photos/seed/${post.title.replace(/\s/g,'')}/600/300" style="opacity:0.8"></div>`;
             }
-            let contentHtml = isOwn ? post.content.replace(/[&<>"]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])) : post.content;
+            let contentHtml = '';
+            if (isOwn) {
+                contentHtml = post.content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            } else {
+                contentHtml = post.content;
+            }
             card.innerHTML = `
                 <div class="post-meta"><span>📅 ${new Date(post.date).toLocaleDateString()}</span><span>${isOwn?'✏️ Propio':'🌳 '+(post.author||'Externo')}</span></div>
                 <h2 class="post-title">${post.title}</h2>${media}<div class="post-content">${contentHtml} ${!isOwn?`<br><br><a href="${post.link}" target="_blank" style="color:#66bb6a">Leer original ↗</a>`:''}</div>`;
@@ -776,23 +803,38 @@
         }
 
         function getMimeType(extension) {
-            const map = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', mp4:'video/mp4', webm:'video/webm', mp3:'audio/mpeg', wav:'audio/wav', pdf:'application/pdf' };
-            return map[extension.toLowerCase()] || 'application/octet-stream';
+            const ext = extension.toLowerCase();
+            const map = { 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'mp4': 'video/mp4', 'webm': 'video/webm', 'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'pdf': 'application/pdf' };
+            return map[ext] || 'application/octet-stream';
         }
 
         function escapeXml(unsafe) {
-            return unsafe.replace(/[<>&'"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;' }[c]));
+            return unsafe.replace(/[<>&'"]/g, function (c) {
+                switch (c) { case '<': return '&lt;'; case '>': return '&gt;'; case '&': return '&amp;'; case '\'': return '&apos;'; case '"': return '&quot;'; }
+            });
         }
 
-        function formatDateRFC822(isoString) { return new Date(isoString).toUTCString(); }
+        function formatDateRFC822(isoString) {
+            return new Date(isoString).toUTCString();
+        }
 
         async function generateAndDownloadRSS() {
             const siteUrlInput = document.getElementById('site-url-input');
             const siteUrl = siteUrlInput.value.trim();
-            if (!siteUrl) { alert("Ingresa la URL base de tu sitio"); return; }
+            if (!siteUrl) {
+                alert("Por favor ingresa la URL base de tu sitio (ej: https://usuario.github.io/repo/)");
+                return;
+            }
             const baseUrl = siteUrl.endsWith('/') ? siteUrl : siteUrl + '/';
             const posts = await loadPostsData();
-            let xml = `<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel><title>Árbol: Red Social Libre</title><link>${baseUrl}</link><description>Un espacio personal y libre para compartir ideas, multimedia y pensamientos.</description><language>es</language>`;
+            let xml = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>Árbol: Red Social Libre</title>
+    <link>${baseUrl}</link>
+    <description>Un espacio personal y libre para compartir ideas, multimedia y pensamientos.</description>
+    <language>es</language>
+`;
             posts.forEach(post => {
                 const pubDate = formatDateRFC822(post.date);
                 const link = `${baseUrl}#post-${post.id}`;
@@ -800,22 +842,35 @@
                 let enclosureTag = "";
                 if (post.media) {
                     const mediaUrl = `${baseUrl}media/${post.media}`;
-                    const mime = getMimeType(post.media.split('.').pop());
-                    enclosureTag = `<enclosure url="${mediaUrl}" type="${mime}"/>`;
+                    const ext = post.media.split('.').pop();
+                    const mime = getMimeType(ext);
+                    enclosureTag = `\n    <enclosure url="${mediaUrl}" type="${mime}"/>`;
                 }
-                xml += `<item><title>${escapeXml(post.title)}</title><link>${link}</link><description>${description}</description><pubDate>${pubDate}</pubDate>${enclosureTag}</item>`;
+                xml += `
+    <item>
+      <title>${escapeXml(post.title)}</title>
+      <link>${link}</link>
+      <description>${description}</description>
+      <pubDate>${pubDate}</pubDate>${enclosureTag}
+    </item>`;
             });
-            xml += `</channel></rss>`;
+            xml += `
+  </channel>
+</rss>`;
             const blob = new Blob([xml], { type: "application/xml" });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "rss.xml"; a.click();
-            alert("Archivo rss.xml generado. Súbelo a tu repositorio.");
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "rss.xml";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            alert("Archivo rss.xml generado. Súbelo a tu repositorio para actualizar el feed.");
         }
 
         // ========== INICIALIZACIÓN ==========
         document.addEventListener('DOMContentLoaded', () => {
             loadMyPosts();
             loadContacts();
-            // Iniciar Firebase con el ID guardado
             const idGuardado = obtenerIdDispositivo();
             iniciarFirebase(idGuardado);
 
