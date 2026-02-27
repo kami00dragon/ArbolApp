@@ -8,7 +8,6 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <!-- Script de Autenticación -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
@@ -17,7 +16,6 @@
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
             --border-stem: #1b5e20; --sidebar-width: 340px;
-            --msg-p2p-bg: #2e7d32; --msg-relay-bg: #f57c00;
         }
         body { margin: 0; padding: 0; font-family: 'Georgia', serif; background-color: var(--wood-dark); background-image: repeating-linear-gradient(45deg, #3e2723 0, #3e2723 10px, #4e342e 10px, #4e342e 20px); color: var(--text-parchment); height: 100vh; overflow: hidden; }
         .app-layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; height: 100vh; max-width: 1600px; margin: 0 auto; background-color: rgba(0,0,0,0.2); position: relative; z-index: 10; }
@@ -101,7 +99,7 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
         .p2p-body { padding: 0; display: flex; flex-direction: column; height: 550px; }
-        .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin: 10px; padding: 5px; font-family: monospace; font-size: 0.7rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
+        .p2p-log { height: 80px; background: #000; border: 1px solid #555; margin: 10px; padding: 5px; font-family: monospace; font-size: 0.75rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
         .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin: 0 10px 10px 10px; font-family: monospace; font-size: 0.9rem; display: flex; flex-direction: column; }
         .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; align-self: flex-start; }
@@ -261,11 +259,14 @@
                     <div class="peer-id-box"><label>Tu ID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
                     <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
                 </div>
-                <button class="btn-call" onclick="conectarLlamada()">📞 Llamar</button>
+                
+                <!-- CAMBIO: Añadido ID al botón para usar addEventListener -->
+                <button id="btn-call-action" class="btn-call">📞 Llamar</button>
+                
                 <div class="message-controls">
                     <div class="message-input-area">
                         <textarea id="msg-input" placeholder="Escribe... (Enter envía)"></textarea>
-                        <button class="btn-send" onclick="handleSendMessage()">➤</button>
+                        <button id="btn-send-action" class="btn-send">➤</button>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -319,6 +320,10 @@
         const capaActualSpan = document.getElementById('capa-actual');
         const p2pLog = document.getElementById('p2p-log');
 
+        // Globales para debug
+        window.db = db; 
+        window.miId = miId;
+
         const CONTACTS_KEY = 'arbolapp_contacts';
         let contacts = [];
 
@@ -344,94 +349,70 @@
         function logP2P(mensaje) {
             if (!p2pLog) return;
             const time = new Date().toLocaleTimeString().split(' ')[0];
-            p2pLog.innerHTML += `<div>[${time}] ${mensaje}</div>`;
+            const linea = `[${time}] ${mensaje}`;
+            p2pLog.innerHTML += `<div>${linea}</div>`;
             p2pLog.scrollTop = p2pLog.scrollHeight;
+            console.log(linea);
         }
 
-        // ========== FUNCIÓN DE AUTENTICACIÓN Y CONEXIÓN (MEJORADA) ==========
+        // ========== FUNCIÓN DE AUTENTICACIÓN Y CONEXIÓN ==========
         function iniciarFirebase(id) {
             miId = id;
-            
-            // Log en pantalla Y en consola del navegador (F12)
-            console.log("🔵 [APP] Iniciando con ID:", miId);
-            logP2P(`🔑 ID: ${miId}`);
+            logP2P(`🔑 Iniciando sistema con ID: ${miId}`);
             myPeerIdInput.value = miId;
 
-            // IMPORTANTE: Si la app ya existe, no la borramos ni la recreamos.
-            // Recrearla causaba errores silenciosos de "App already exists".
             if (!app) {
                 try {
                     app = firebase.initializeApp(firebaseConfig);
                     db = firebase.database();
-                    console.log("✅ [APP] Firebase inicializado correctamente.");
+                    window.db = db; // Exponer para debug en consola
+                    logP2P("✅ Firebase inicializado.");
                 } catch (e) {
-                    console.error("❌ [APP] Error inicializando Firebase:", e);
-                    logP2P("❌ Error crítico iniciando Firebase. Revisa la consola (F12).");
+                    logP2P(`❌ Error inicializando Firebase: ${e.message}`);
                     return;
                 }
-            } else {
-                console.log("🔄 [APP] Reutilizando instancia existente de Firebase.");
             }
 
-            // AUTENTICACIÓN
             firebase.auth().signInAnonymously()
                 .then(() => {
-                    console.log("✅ [AUTH] Usuario autenticado correctamente.");
-                    logP2P('✅ Autenticado en Firebase');
+                    logP2P('✅ Autenticado correctamente.');
                     configurarEscucha();
                 })
                 .catch((error) => {
-                    console.error("❌ [AUTH] Error de autenticación:", error);
                     logP2P(`❌ Error de auth: ${error.message}`);
                 });
         }
 
-        // Configura los listeners de base de datos DESPUÉS de autenticarse
         function configurarEscucha() {
-            console.log("👂 [LISTEN] Configurando escucha en:", 'mensajes/' + miId);
+            logP2P("👂 Configurando receptor de mensajes...");
             inboxRef = db.ref('mensajes/' + miId);
 
             if (escuchando) inboxRef.off();
             
             inboxRef.on('child_added', (snapshot) => {
                 const mensaje = snapshot.val();
-                
-                // Ignorar mensajes propios (por seguridad)
-                if (mensaje.sender === miId) {
-                    console.log("🚫 [LISTEN] Mensaje propio ignorado.");
-                    return;
-                }
+                if (mensaje.sender === miId) return; 
 
-                console.log("📨 [RECEIVE] Mensaje recibido de:", mensaje.sender, "Tipo:", mensaje.tipo);
+                logP2P(`📨 DATO RECIBIDO de: ${mensaje.sender} [Tipo: ${mensaje.tipo}]`);
 
-                // Si es una llamada (tipo "call")
                 if (mensaje.tipo === 'call') {
-                    logP2P(`📞 Llamada entrante de: ${mensaje.sender}`);
                     remotePeerIdInput.value = mensaje.sender;
                     idRemoto = mensaje.sender;
                     addSystemMessage(`📞 Llamada entrante de: ${idRemoto}`);
-                    
-                    // Abrir modal automáticamente si está cerrado
                     const modal = document.getElementById('p2p-modal');
                     if (!modal.open) modal.showModal();
                 } else {
-                    // Mensaje de texto normal
-                    logP2P(`📨 Recibido de ${mensaje.sender}: ${mensaje.text}`);
                     addMessage(mensaje.text, 'received');
                     if (!idRemoto) {
                         idRemoto = mensaje.sender;
                         remotePeerIdInput.value = idRemoto;
-                        addSystemMessage(`📞 Primer mensaje de: ${idRemoto}`);
                     }
                 }
-
-                // Eliminar mensaje después de leerlo (para no llenar la DB)
                 snapshot.ref.remove();
             });
             
             escuchando = true;
 
-            // Enviar mensajes pendientes (si el usuario escribió antes de conectar)
             while (bufferMensajes.length) {
                 const { texto, destino } = bufferMensajes.shift();
                 enviarMensajeFirebase(texto, destino, 'text');
@@ -439,22 +420,22 @@
 
             actualizarEstado('idle');
             capaActualSpan.innerText = 'Firebase';
-            logP2P('✅ Escuchando mensajes...');
+            logP2P('✅ Sistema listo. Esperando eventos.');
         }
 
-        // ========== FUNCIÓN DE ENVÍO (MEJORADA) ==========
+        // ========== FUNCIÓN DE ENVÍO ==========
         function enviarMensajeFirebase(texto, destino, tipo = 'text') {
-            // 1. Verificación de base de datos
+            logP2P(`📤 [INTENTO ENVIAR] Destino: ${destino}, Tipo: ${tipo}`);
+
             if (!db) {
-                console.warn("⚠️ [SEND] DB no lista. Guardando en buffer.");
-                bufferMensajes.push({ texto, destino });
+                logP2P("❌ FALLO: La variable 'db' es nula. Firebase no se inició bien.");
+                alert("Error crítico: Base de datos no iniciada. Recarga la página.");
                 return;
             }
 
-            // 2. Verificación del destino (ID Remoto)
             if (!destino) {
-                console.error("❌ [SEND] Intento de envío SIN DESTINO.");
-                alert("⚠️ Error: No has ingresado el ID del destinatario en la casilla 'ID Remoto'.");
+                logP2P("❌ FALLO: El destino está vacío.");
+                alert("Debes ingresar un ID remoto.");
                 return;
             }
 
@@ -465,27 +446,20 @@
                 tipo: tipo
             };
 
-            console.log(`📤 [SEND] Enviando a ${destino}. Tipo: ${tipo}`);
+            logP2P("📡 Escribiendo en Firebase...");
 
-            // 3. Intento de escritura en Firebase
             db.ref('mensajes/' + destino).push(mensaje)
                 .then(() => {
-                    console.log(`✅ [SEND] Éxito al enviar a ${destino}`);
+                    logP2P(`✅ ÉSCRITURA EXITOSA en Firebase.`);
                     if (tipo === 'text') logP2P(`Mensaje enviado a ${destino}`);
-                    else logP2P(`📞 Llamada enviada a ${destino}`);
+                    else logP2P(`Llamada enviada a ${destino}`);
                 })
                 .catch((err) => {
-                    console.error("❌ [SEND] Error Firebase:", err);
-                    // Si el error es de permisos, lo mostramos claro
-                    if (err.code === 'PERMISSION_DENIED') {
-                        logP2P(`❌ Permiso denegado. Revisa las Reglas de Firebase.`);
-                    } else {
-                        logP2P(`Error al enviar: ${err.message}`);
-                    }
+                    logP2P(`❌ ERROR DE FIREBASE: ${err.message} (Código: ${err.code})`);
+                    alert("Error de Firebase: " + err.message);
                 });
         }
 
-        // Función para enviar una llamada (presencia)
         function enviarPresencia(destino) {
             if (!destino) return;
             enviarMensajeFirebase('', destino, 'call');
@@ -494,11 +468,12 @@
         }
 
         function reiniciarConexion(nuevoId) {
-            logP2P(`🔄 Reiniciando con nuevo ID: ${nuevoId}`);
+            logP2P(`🔄 Reiniciando todo...`);
             if (app) {
                 app.delete();
-                app = null; // IMPORTANTE: Resetear la variable
+                app = null;
                 db = null;
+                window.db = null;
                 escuchando = false;
             }
             bufferMensajes = [];
@@ -552,19 +527,31 @@
             document.getElementById('p2p-modal').close();
         }
 
+        // ========== MANEJO DE BOTONES (CRÍTICO) ==========
+        // Ahora usamos addEventListener, no onclick en HTML
+
         function handleSendMessage() {
+            alert("✅ Botón ENVIAR pulsado (Función ejecutada)."); // Alerta de prueba
+            
             const texto = msgInput.value.trim();
-            if (!texto) return;
+            if (!texto) {
+                logP2P("⚠️ [AVISO] Campo de texto vacío.");
+                return;
+            }
 
             const destino = remotePeerIdInput.value.trim();
             if (!destino) {
+                logP2P("❌ [ERROR] No hay ID Remoto ingresado.");
                 alert("⚠️ Debes ingresar el ID remoto");
                 return;
             }
 
             msgInput.value = '';
             addMessage(texto, 'pending');
+            
+            logP2P("🚀 [ACCION] Procediendo a enviar mensaje...");
             if (!db || !miId) {
+                logP2P("⚠️ [BUFFER] DB no lista, guardando para más tarde.");
                 bufferMensajes.push({ texto, destino });
                 iniciarFirebase(obtenerIdDispositivo());
             } else {
@@ -575,19 +562,21 @@
         }
 
         function conectarLlamada() {
+            alert("✅ Botón LLAMAR pulsado (Función ejecutada)."); // Alerta de prueba
+
             const destino = remotePeerIdInput.value.trim();
-            
-            console.log("📞 [CALL] Botón Llamar pulsado. Destino en casilla:", destino);
-            
+            logP2P(`🔍 [LECTURA] ID Remoto en casilla: "${destino}"`);
+            logP2P(`🔍 [ESTADO] Variable 'db' es: ${db ? 'CARGADA' : 'NULL'}`);
+
             if (!destino) {
-                alert('⚠️ Debes escribir o pegar el ID del otro dispositivo en la casilla "ID Remoto" antes de llamar.');
-                // Foco en la casilla para facilitar
+                logP2P("❌ [ERROR] Casilla de ID Remoto vacía.");
+                alert('⚠️ Debes escribir el ID del otro dispositivo en "ID Remoto" para llamar.');
                 remotePeerIdInput.focus();
                 return;
             }
             
             idRemoto = destino;
-            console.log(`📞 [CALL] Iniciando llamada hacia ${destino}`);
+            logP2P(`📞 [LLAMADA] Iniciando llamada hacia: ${destino}`);
             enviarPresencia(destino);
         }
 
@@ -944,18 +933,45 @@
 
         // ========== INICIALIZACIÓN ==========
         document.addEventListener('DOMContentLoaded', () => {
-            loadMyPosts();
-            loadContacts();
-            const idGuardado = obtenerIdDispositivo();
-            iniciarFirebase(idGuardado);
+            try {
+                loadMyPosts();
+                loadContacts();
+                const idGuardado = obtenerIdDispositivo();
+                iniciarFirebase(idGuardado);
 
-            if (msgInput) {
-                msgInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                // --- ASIGNACIÓN DE EVENTOS (Robusta) ---
+                const btnCall = document.getElementById('btn-call-action');
+                const btnSend = document.getElementById('btn-send-action');
+
+                if (btnCall) {
+                    btnCall.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        conectarLlamada();
+                    });
+                } else {
+                    console.error("❌ No se encontró el botón de Llamar en el DOM");
+                }
+
+                if (btnSend) {
+                    btnSend.addEventListener('click', (e) => {
                         e.preventDefault();
                         handleSendMessage();
-                    }
-                });
+                    });
+                } else {
+                    console.error("❌ No se encontró el botón de Enviar en el DOM");
+                }
+
+                if (msgInput) {
+                    msgInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Error general al iniciar:", e);
+                alert("Error cargando la aplicación: " + e.message);
             }
         });
     </script>
