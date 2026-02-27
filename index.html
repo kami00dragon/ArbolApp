@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArbolApp - Red Socialista Libre</title>
+    <title>ArbolApp - Red Social Libre</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- NUEVO: Script de Autenticación -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
-        /* ========== ESTILOS COMPLETOS (sin omitir nada) ========== */
+        /* ========== ESTILOS COMPLETOS ========== */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -77,7 +79,7 @@
         .input-group { display: flex; gap: 5px; margin-bottom: 10px; }
         .input-group input { flex: 1; }
 
-        /* Modal P2P (con pestañas) */
+        /* Modal P2P */
         dialog { border: 4px solid var(--leaf-green); border-radius: 15px; padding: 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 95%; max-width: 650px; background: var(--wood-light); color: var(--text-parchment); }
         dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
         .p2p-header { background: var(--leaf-green); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--flower-pink); }
@@ -101,10 +103,10 @@
         .p2p-body { padding: 0; display: flex; flex-direction: column; height: 550px; }
         .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin: 10px; padding: 5px; font-family: monospace; font-size: 0.7rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
         
-        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin: 0 10px 10px 10px; font-family: monospace; font-size: 0.9rem; }
-        .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
+        .chat-window { flex-grow: 1; background: #000; border: 2px solid #5d4037; border-radius: 8px; padding: 10px; overflow-y: auto; margin: 0 10px 10px 10px; font-family: monospace; font-size: 0.9rem; display: flex; flex-direction: column; }
+        .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; align-self: flex-start; }
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; border: 1px solid #1b5e20; }
-        .msg-received { background: #555; color: white; align-self: flex-start; border: 1px solid #777; }
+        .msg-received { background: #555; color: white; border: 1px solid #777; }
         .msg-system { text-align: center; color: #aaa; font-size: 0.8rem; font-style: italic; margin: 5px 0; }
         .msg-pending { color: #ff9800; font-style: italic; font-size: 0.8rem; }
 
@@ -145,12 +147,13 @@
             body { overflow: auto; }
             .main-feed { height: auto; overflow: visible; }
             .tree-trunk { border: none; }
+            .p2p-body { height: 400px; }
         }
     </style>
 </head>
 <body>
     <div class="app-layout">
-        <!-- SIDEBAR (completo) -->
+        <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🌱 ArbolApp</h2>
@@ -224,7 +227,7 @@
         </main>
     </div>
 
-    <!-- MODAL P2P (Chat y Contactos) -->
+    <!-- MODAL P2P -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
             <h3>
@@ -243,6 +246,7 @@
             <button class="p2p-tab active" id="tab-chat-btn" onclick="switchP2PTab('chat')">💬 Chat</button>
             <button class="p2p-tab" id="tab-contacts-btn" onclick="switchP2PTab('contacts')">📒 Contactos</button>
         </div>
+        
         <!-- Contenido Chat -->
         <div id="p2p-tab-chat" class="p2p-tab-content">
             <div class="p2p-status-bar">
@@ -269,7 +273,8 @@
                 </div>
             </div>
         </div>
-        <!-- Contenido Contactos (dentro del modal) -->
+        
+        <!-- Contenido Contactos -->
         <div id="p2p-tab-contacts" class="p2p-tab-content hidden">
             <div style="padding: 15px;">
                 <h4 style="margin-top:0; color:var(--leaf-light);">👥 Mis Contactos</h4>
@@ -343,7 +348,7 @@
             p2pLog.scrollTop = p2pLog.scrollHeight;
         }
 
-        // ========== FUNCIONES DEL MOTOR FIREBASE ==========
+        // ========== FUNCIÓN DE AUTENTICACIÓN Y CONEXIÓN ==========
         function iniciarFirebase(id) {
             miId = id;
             logP2P(`🔑 ID: ${miId}`);
@@ -352,14 +357,32 @@
             if (app) {
                 app.delete();
             }
+            
             app = firebase.initializeApp(firebaseConfig);
             db = firebase.database();
 
+            // AUTENTICACIÓN ANÓNIMA
+            firebase.auth().signInAnonymously()
+                .then(() => {
+                    logP2P('✅ Autenticado en Firebase');
+                    configurarEscucha();
+                })
+                .catch((error) => {
+                    logP2P(`❌ Error de autenticación: ${error.message}`);
+                    console.error(error);
+                });
+        }
+
+        // Configura los listeners de base de datos DESPUÉS de autenticarse
+        function configurarEscucha() {
             inboxRef = db.ref('mensajes/' + miId);
 
             if (escuchando) inboxRef.off();
+            
             inboxRef.on('child_added', (snapshot) => {
                 const mensaje = snapshot.val();
+                
+                // Ignorar mensajes propios (por seguridad)
                 if (mensaje.sender === miId) return;
 
                 // Si es una llamada (tipo "call")
@@ -368,6 +391,10 @@
                     remotePeerIdInput.value = mensaje.sender;
                     idRemoto = mensaje.sender;
                     addSystemMessage(`📞 Llamada entrante de: ${idRemoto}`);
+                    
+                    // Abrir modal automáticamente si está cerrado
+                    const modal = document.getElementById('p2p-modal');
+                    if (!modal.open) modal.showModal();
                 } else {
                     // Mensaje de texto normal
                     logP2P(`📨 Recibido de ${mensaje.sender}: ${mensaje.text}`);
@@ -379,12 +406,13 @@
                     }
                 }
 
-                // Eliminar mensaje después de leerlo (opcional)
+                // Eliminar mensaje después de leerlo (para no llenar la DB)
                 snapshot.ref.remove();
             });
+            
             escuchando = true;
 
-            // Enviar mensajes pendientes
+            // Enviar mensajes pendientes (si el usuario escribió antes de conectar)
             while (bufferMensajes.length) {
                 const { texto, destino } = bufferMensajes.shift();
                 enviarMensajeFirebase(texto, destino, 'text');
@@ -392,7 +420,7 @@
 
             actualizarEstado('idle');
             capaActualSpan.innerText = 'Firebase';
-            logP2P('✅ Conectado a Firebase');
+            logP2P('✅ Escuchando mensajes...');
         }
 
         // Función mejorada que acepta tipo de mensaje
@@ -631,7 +659,7 @@
             }
         }
 
-        // ========== FUNCIONES DE POSTS Y RSS (completas) ==========
+        // ========== FUNCIONES DE POSTS Y RSS ==========
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         let currentFeedTab = 'my-posts';
 
