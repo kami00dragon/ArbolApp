@@ -8,11 +8,10 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <!-- Script de Autenticación -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <style>
-        /* ========== ESTILOS COMPLETOS ========== */
+        /* ========== ESTILOS COMPLETOS (sin cambios) ========== */
         :root {
             --wood-dark: #3e2723; --wood-light: #5d4037; --leaf-green: #2e7d32;
             --leaf-light: #66bb6a; --flower-pink: #e91e63; --text-parchment: #efebe9;
@@ -79,27 +78,13 @@
         .input-group { display: flex; gap: 5px; margin-bottom: 10px; }
         .input-group input { flex: 1; }
 
-        /* Modal P2P */
+        /* Modal P2P (simplificado) */
         dialog { border: 4px solid var(--leaf-green); border-radius: 15px; padding: 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 95%; max-width: 650px; background: var(--wood-light); color: var(--text-parchment); }
         dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
         .p2p-header { background: var(--leaf-green); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--flower-pink); }
         .p2p-header h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
-        /* CAMBIO: Logo de hoz y martillo (diseño minimalista) */
-        .logo-hammer-sickle {
-            width: 32px;
-            height: 32px;
-            display: inline-block;
-            position: relative;
-        }
-        .logo-hammer-sickle svg {
-            width: 100%;
-            height: 100%;
-            stroke: #000;
-            stroke-width: 4;
-            fill: none;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
+        .logo-hammer-sickle { width: 32px; height: 32px; display: inline-block; }
+        .logo-hammer-sickle svg { width: 100%; height: 100%; stroke: #000; stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
         
         .p2p-tabs { display: flex; background: #1b5e20; }
         .p2p-tab { flex: 1; background: none; border: none; color: #a5d6a7; padding: 12px 0; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
@@ -110,9 +95,7 @@
         .p2p-status-bar { display: flex; align-items: center; gap: 8px; padding: 8px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border-stem); font-size: 0.9rem; }
         .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
         .status-idle { background-color: #9e9e9e; }
-        .status-calling { background-color: #2196F3; animation: pulse 1.5s infinite; }
-        .status-connected { background-color: #4CAF50; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .status-authenticated { background-color: #4CAF50; }
 
         .p2p-body { padding: 0; display: flex; flex-direction: column; height: 550px; }
         .p2p-log { height: 60px; background: #000; border: 1px solid #555; margin: 10px; padding: 5px; font-family: monospace; font-size: 0.7rem; color: #0f0; overflow-y: auto; border-radius: 4px; }
@@ -122,7 +105,6 @@
         .msg-sent { background: var(--leaf-green); color: white; align-self: flex-end; margin-left: auto; border: 1px solid #1b5e20; }
         .msg-received { background: #555; color: white; border: 1px solid #777; }
         .msg-system { text-align: center; color: #aaa; font-size: 0.8rem; font-style: italic; margin: 5px 0; }
-        .msg-pending { color: #ff9800; font-style: italic; font-size: 0.8rem; }
 
         .peer-ids { display: flex; gap: 10px; margin: 0 10px 10px 10px; flex-wrap: wrap; }
         .peer-id-box { flex: 1; min-width: 200px; background: #2a1b15; border: 1px solid #5d4037; border-radius: 4px; padding: 8px; }
@@ -135,13 +117,9 @@
         .message-controls { display: flex; flex-direction: column; gap: 10px; margin: 0 10px 10px 10px; }
         .message-input-area { display: flex; gap: 10px; }
         #msg-input { flex: 1; background: #2a1b15; border: 1px solid #795548; color: #fff; padding: 12px; border-radius: 5px; font-family: inherit; resize: none; min-height: 60px; font-size: 1rem; }
-        #msg-input:disabled { background: #221; color: #555; }
         .btn-send { background: var(--flower-pink); color: white; border: none; padding: 0 25px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
         .btn-send:hover { background: #c2185b; }
         .btn-send:disabled { background: #555; cursor: not-allowed; }
-        .btn-call { background: #2196F3; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom:10px;}
-        .btn-call:hover { background: #1976D2; }
-        .btn-call:disabled { background: #4a6b8f; cursor: not-allowed; }
 
         /* Contactos en modal */
         .contact-list-modal { list-style: none; padding: 0; margin: 10px 0; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 5px; }
@@ -167,7 +145,7 @@
 </head>
 <body>
     <div class="app-layout">
-        <!-- SIDEBAR -->
+        <!-- SIDEBAR (igual) -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🌱 ArbolApp</h2>
@@ -178,6 +156,7 @@
                 <button class="tab-btn" onclick="switchSidebarTab('data', event)">💾 Datos</button>
             </div>
             <div id="tab-editor" class="sidebar-content">
+                <!-- ... mismo contenido ... -->
                 <div class="form-group"><label>Título de la Hoja</label><input type="text" id="post-title" placeholder="Ej: Un nuevo día en el bosque"></div>
                 <div class="form-group"><label>Contenido (Texto)</label><textarea id="post-content" placeholder="Escribe aquí tus pensamientos..."></textarea></div>
                 <div class="form-group"><label>Archivo Multimedia (Opcional)</label><input type="text" id="post-media" placeholder="Ej: foto.jpg (debe estar en /media)"></div>
@@ -195,14 +174,15 @@
             </div>
             <div id="tab-contacts" class="sidebar-content" style="display: none;">
                 <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px; margin-top:0;">👥 Agenda P2P</h3>
-                <p style="font-size:0.8rem; color:#aaa; margin-bottom:15px;">Guarda los IDs de tus amigos.</p>
+                <p style="font-size:0.8rem; color:#aaa; margin-bottom:15px;">Guarda los IDs de tus amigos (sus UID).</p>
                 <div class="form-group"><label>Nombre del Contacto</label><input type="text" id="contact-name" placeholder="Ej: Juan Pérez"></div>
-                <div class="form-group"><label>ID del Contacto</label><input type="text" id="contact-id" placeholder="Pega el ID aquí..."></div>
+                <div class="form-group"><label>ID del Contacto</label><input type="text" id="contact-id" placeholder="Pega el UID aquí..."></div>
                 <button class="btn-action" onclick="addContact()">➕ Agregar a Agenda</button>
                 <hr style="border:0; border-top:1px dashed #5d4037; margin:20px 0;">
                 <ul id="contact-list" class="contact-list"></ul>
             </div>
             <div id="tab-data" class="sidebar-content" style="display: none;">
+                <!-- ... mismo contenido ... -->
                 <h3 style="color:var(--leaf-light); border-bottom:1px solid #5d4037; padding-bottom:5px;">📦 Sincronización</h3>
                 <div style="background: rgba(255, 152, 0, 0.1); padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #FF9800;">
                     <h4 style="margin:0 0 5px 0; color:#FF9800;">📡 Generador RSS</h4>
@@ -220,7 +200,7 @@
             </div>
         </aside>
 
-        <!-- FEED PRINCIPAL -->
+        <!-- FEED PRINCIPAL (igual) -->
         <main class="main-feed">
             <div class="tree-trunk">
                 <header class="feed-header">
@@ -241,21 +221,16 @@
         </main>
     </div>
 
-    <!-- MODAL P2P -->
+    <!-- MODAL P2P (simplificado) -->
     <dialog id="p2p-modal">
         <div class="p2p-header">
             <h3>
-                <!-- CAMBIO: Logo de hoz y martillo -->
                 <span class="logo-hammer-sickle">
                     <svg viewBox="0 0 100 100">
-                        <!-- Martillo (forma de T inclinada) -->
                         <path d="M35,65 L65,35" stroke="black" stroke-width="6" stroke-linecap="round" />
                         <path d="M45,55 L70,30" stroke="black" stroke-width="8" stroke-linecap="round" />
-                        <!-- Cabeza del martillo -->
                         <rect x="65" y="25" width="15" height="15" stroke="black" stroke-width="4" fill="none" />
-                        <!-- Hoz (curva) -->
                         <path d="M25,40 Q10,20 35,10 Q50,5 55,20 Q60,35 45,45 Q30,55 25,40" stroke="black" stroke-width="5" fill="none" />
-                        <!-- Mango de la hoz -->
                         <line x1="45" y1="45" x2="60" y2="60" stroke="black" stroke-width="5" stroke-linecap="round" />
                     </svg>
                 </span>
@@ -279,33 +254,29 @@
             <div class="p2p-body">
                 <div id="chat-window" class="chat-window"></div>
                 <div class="peer-ids">
-                    <div class="peer-id-box"><label>Tu ID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
-                    <div class="peer-id-box"><label>ID Remoto:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega ID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
+                    <div class="peer-id-box"><label>Tu UID:</label><div class="peer-id-value"><input type="text" id="my-peer-id" readonly><button onclick="copyMyId()">📋</button></div></div>
+                    <div class="peer-id-box"><label>UID Destino:</label><div class="peer-id-value"><input type="text" id="remote-peer-id" placeholder="Pega UID..."><button onclick="document.getElementById('remote-peer-id').value=''">✕</button></div></div>
                 </div>
-                <button class="btn-call" onclick="conectarLlamada()">📞 Llamar</button>
                 <div class="message-controls">
                     <div class="message-input-area">
                         <textarea id="msg-input" placeholder="Escribe... (Enter envía)"></textarea>
                         <button class="btn-send" onclick="handleSendMessage()">➤</button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button class="btn-secondary" style="flex:1;" onclick="reiniciarId()">🔄 Reiniciar mi ID</button>
-                </div>
             </div>
         </div>
         
-        <!-- Contenido Contactos -->
+        <!-- Contenido Contactos (igual) -->
         <div id="p2p-tab-contacts" class="p2p-tab-content hidden">
             <div style="padding: 15px;">
                 <h4 style="margin-top:0; color:var(--leaf-light);">👥 Mis Contactos</h4>
                 <ul id="contact-list-modal" class="contact-list-modal"></ul>
                 <div class="add-contact">
                     <input type="text" id="contact-name-modal" placeholder="Nombre">
-                    <input type="text" id="contact-id-modal" placeholder="ID">
+                    <input type="text" id="contact-id-modal" placeholder="UID">
                     <button class="btn-action" style="width:auto; padding:8px 15px;" onclick="addContactModal()">➕</button>
                 </div>
-                <p style="font-size:0.8rem; color:#aaa;">Haz clic en un contacto para copiar su ID.</p>
+                <p style="font-size:0.8rem; color:#aaa;">Haz clic en un contacto para copiar su UID.</p>
             </div>
         </div>
     </dialog>
@@ -322,17 +293,15 @@
             appId: "1:151816184751:web:777e49d8ab78343af3455a"
         };
 
-        // ========== VARIABLES GLOBALES MEJORADAS ==========
+        // ========== VARIABLES GLOBALES ==========
         let app = null;
         let db = null;
         let inboxRef = null;
-        let miId = null;
-        let idRemoto = null;
-        let bufferMensajes = [];
-        let escuchando = false;
-        let authReady = false;          // NUEVO: indica si autenticación anónima está completa
+        let currentUser = null;          // Usuario autenticado de Firebase
+        let authReady = false;
+        let bufferMensajes = [];          // Para mensajes enviados antes de autenticar
 
-        // ========== VARIABLES GLOBALES UI ==========
+        // Elementos UI
         const chatWindow = document.getElementById('chat-window');
         const myPeerIdInput = document.getElementById('my-peer-id');
         const remotePeerIdInput = document.getElementById('remote-peer-id');
@@ -345,24 +314,6 @@
         const CONTACTS_KEY = 'arbolapp_contacts';
         let contacts = [];
 
-        // ========== GESTIÓN DE ID PERSISTENTE ==========
-        const ID_KEY = 'arbolapp_device_id';
-        function generarNuevoId() {
-            if (window.crypto && window.crypto.randomUUID) {
-                return window.crypto.randomUUID();
-            }
-            return 'user_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-        }
-
-        function obtenerIdDispositivo() {
-            let id = localStorage.getItem(ID_KEY);
-            if (!id) {
-                id = generarNuevoId();
-                localStorage.setItem(ID_KEY, id);
-            }
-            return id;
-        }
-
         // ========== FUNCIÓN DE LOG ==========
         function logP2P(mensaje, esError = false) {
             if (!p2pLog) return;
@@ -374,166 +325,111 @@
             else console.log(mensaje);
         }
 
-        // ========== FUNCIÓN DE AUTENTICACIÓN Y CONEXIÓN (MEJORADA) ==========
-        function iniciarFirebase(id) {
-            miId = id;
-            
-            logP2P(`🔑 ID: ${miId}`);
-            myPeerIdInput.value = miId;
-
+        // ========== INICIALIZACIÓN DE FIREBASE ==========
+        function iniciarFirebase() {
             if (!app) {
-                try {
-                    app = firebase.initializeApp(firebaseConfig);
-                    db = firebase.database();
-                    logP2P("Firebase inicializado correctamente.");
-                } catch (e) {
-                    logP2P(`❌ Error crítico: ${e.message}`, true);
-                    return;
-                }
-            } else {
-                logP2P("Reutilizando instancia de Firebase.");
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                logP2P("Firebase inicializado.");
             }
 
-            // Autenticación anónima
-            firebase.auth().signInAnonymously()
-                .then(() => {
-                    logP2P('✅ Autenticado en Firebase');
+            // Escuchar cambios en autenticación
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
                     authReady = true;
+                    logP2P(`✅ Autenticado: ${user.uid}`);
+                    myPeerIdInput.value = user.uid;
+                    
+                    // Configurar escucha de mensajes entrantes
                     configurarEscucha();
-
+                    
                     // Enviar mensajes pendientes
                     while (bufferMensajes.length) {
-                        const { texto, destino, tipo } = bufferMensajes.shift();
-                        enviarMensajeFirebase(texto, destino, tipo);
+                        const { texto, destino } = bufferMensajes.shift();
+                        enviarMensajeFirebase(texto, destino);
                     }
-                })
-                .catch((error) => {
-                    logP2P(`❌ Error de auth: ${error.message}`, true);
-                    authReady = false;
-                });
+                    
+                    actualizarEstado('authenticated');
+                } else {
+                    // No autenticado, iniciar sesión anónima
+                    logP2P("Iniciando sesión anónima...");
+                    firebase.auth().signInAnonymously().catch((error) => {
+                        logP2P(`❌ Error auth: ${error.message}`, true);
+                    });
+                }
+            });
         }
 
-        // Configura los listeners de base de datos DESPUÉS de autenticarse
+        // ========== CONFIGURAR ESCUCHA DE MENSAJES EN INBOX ==========
         function configurarEscucha() {
-            if (!db) return;
+            if (!db || !currentUser) return;
 
             // Quitar listener anterior si existe
-            if (inboxRef && escuchando) {
+            if (inboxRef) {
                 inboxRef.off();
             }
 
-            inboxRef = db.ref('mensajes/' + miId);
-            logP2P(`Escuchando en: mensajes/${miId}`);
+            const uid = currentUser.uid;
+            inboxRef = db.ref('inbox/' + uid);
+            logP2P(`👂 Escuchando mensajes en: inbox/${uid}`);
 
+            // Escuchar nuevos mensajes (child_added se dispara para cada mensaje nuevo, incluidos los existentes)
             inboxRef.on('child_added', (snapshot) => {
                 const mensaje = snapshot.val();
-                
-                // Ignorar mensajes propios
-                if (mensaje.sender === miId) {
-                    snapshot.ref.remove(); // Limpiar
-                    return;
-                }
+                // Ignorar mensajes propios (por si acaso)
+                if (mensaje.sender === uid) return;
 
-                logP2P(`📨 Recibido de ${mensaje.sender} (tipo: ${mensaje.tipo || 'text'})`);
-
-                // Si es una llamada
-                if (mensaje.tipo === 'call') {
-                    logP2P(`📞 Llamada entrante de: ${mensaje.sender}`);
-                    remotePeerIdInput.value = mensaje.sender;
-                    idRemoto = mensaje.sender;
-                    addSystemMessage(`📞 Llamada entrante de: ${idRemoto}`);
-
-                    // AUTO-RESPONDER con 'accept' para establecer conexión (handshake)
-                    enviarMensajeFirebase('', mensaje.sender, 'accept');
-
-                    // Mostrar modal si está cerrado
-                    const modal = document.getElementById('p2p-modal');
-                    if (!modal.open) modal.showModal();
-
-                    actualizarEstado('connected'); // Consideramos conectado tras recibir call
-                }
-                else if (mensaje.tipo === 'accept') {
-                    // Confirmación de llamada aceptada
-                    logP2P(`✅ Llamada aceptada por ${mensaje.sender}`);
-                    idRemoto = mensaje.sender;
-                    remotePeerIdInput.value = mensaje.sender;
-                    addSystemMessage(`✅ Conexión establecida con ${idRemoto}`);
-                    actualizarEstado('connected');
-                }
-                else {
-                    // Mensaje de texto normal
-                    addMessage(mensaje.text, 'received');
-                    if (!idRemoto) {
-                        idRemoto = mensaje.sender;
-                        remotePeerIdInput.value = idRemoto;
-                        addSystemMessage(`Primer mensaje de: ${idRemoto}`);
-                        actualizarEstado('connected');
-                    }
-                }
-
-                // Eliminar mensaje después de procesarlo
-                snapshot.ref.remove();
+                logP2P(`📨 Mensaje de ${mensaje.sender}: ${mensaje.text.substring(0,30)}...`);
+                addMessage(`De ${mensaje.sender}: ${mensaje.text}`, 'received');
             });
             
-            escuchando = true;
-            capaActualSpan.innerText = 'Firebase';
+            capaActualSpan.innerText = 'Firebase (inbox)';
         }
 
-        // ========== FUNCIÓN DE ENVÍO (MEJORADA) ==========
-        function enviarMensajeFirebase(texto, destino, tipo = 'text') {
-            // Verificar autenticación y base de datos
-            if (!authReady || !db) {
-                logP2P(`⚠️ Buffer: mensaje para ${destino} (pendiente de auth)`);
-                bufferMensajes.push({ texto, destino, tipo });
+        // ========== ENVIAR MENSAJE ==========
+        function enviarMensajeFirebase(texto, destino) {
+            if (!authReady || !currentUser) {
+                logP2P(`⏳ Buffer: mensaje para ${destino} (pendiente auth)`);
+                bufferMensajes.push({ texto, destino });
                 return;
             }
 
             if (!destino) {
-                logP2P("❌ Intento de envío sin destino", true);
+                logP2P("❌ Destino vacío", true);
                 return;
             }
 
-            // Evitar enviarse a uno mismo
-            if (destino === miId) {
+            if (destino === currentUser.uid) {
                 logP2P("⚠️ No puedes enviarte mensajes a ti mismo");
                 addSystemMessage("No puedes enviarte mensajes a ti mismo");
                 return;
             }
 
             const mensaje = {
-                sender: miId,
+                sender: currentUser.uid,
                 text: texto,
-                timestamp: Date.now(),
-                tipo: tipo
+                timestamp: firebase.database.ServerValue.TIMESTAMP
             };
 
-            logP2P(`📤 Enviando a ${destino} (tipo: ${tipo})`);
+            logP2P(`📤 Enviando a ${destino}: ${texto.substring(0,30)}...`);
 
-            db.ref('mensajes/' + destino).push(mensaje)
+            db.ref('inbox/' + destino).push(mensaje)
                 .then(() => {
                     logP2P(`✅ Mensaje enviado a ${destino}`);
+                    addMessage(`Tú: ${texto}`, 'sent');
                 })
                 .catch((err) => {
-                    logP2P(`❌ Error Firebase: ${err.message}`, true);
+                    logP2P(`❌ Error: ${err.message}`, true);
                     if (err.code === 'PERMISSION_DENIED') {
-                        logP2P("⚠️ Revisa las reglas de Firebase: deben permitir lectura/escritura", true);
+                        logP2P("🔐 Verifica reglas de Firebase", true);
                     }
+                    // Reintentar más tarde
+                    bufferMensajes.push({ texto, destino });
                 });
         }
 
-        // Función para enviar una llamada (presencia)
-        function enviarPresencia(destino) {
-            if (!destino) return;
-            if (destino === miId) {
-                alert("No puedes llamarte a ti mismo");
-                return;
-            }
-            enviarMensajeFirebase('', destino, 'call');
-            addSystemMessage(`📞 Llamando a ${destino}...`);
-            actualizarEstado('calling');
-        }
-
-        // ========== FUNCIONES DE UI DEL CHAT ==========
+        // ========== FUNCIONES DE UI ==========
         function addMessage(text, type) {
             const div = document.createElement('div');
             div.className = `message msg-${type}`;
@@ -552,28 +448,26 @@
 
         function actualizarEstado(estado) {
             statusIndicator.className = 'status-indicator';
-            if (estado === 'idle') {
+            if (estado === 'authenticated') {
+                statusIndicator.classList.add('status-authenticated');
+                statusText.innerText = 'Autenticado';
+            } else {
                 statusIndicator.classList.add('status-idle');
                 statusText.innerText = 'Desconectado';
-            } else if (estado === 'calling') {
-                statusIndicator.classList.add('status-calling');
-                statusText.innerText = 'Conectando...';
-            } else if (estado === 'connected') {
-                statusIndicator.classList.add('status-connected');
-                statusText.innerText = 'En línea';
             }
         }
 
         function copyMyId() {
             myPeerIdInput.select();
-            navigator.clipboard?.writeText(myPeerIdInput.value).then(() => alert("ID copiado")).catch(() => document.execCommand('copy'));
+            navigator.clipboard?.writeText(myPeerIdInput.value).then(() => alert("UID copiado")).catch(() => document.execCommand('copy'));
         }
 
         function openP2P() {
             document.getElementById('p2p-modal').showModal();
-            myPeerIdInput.value = miId || obtenerIdDispositivo();
+            if (currentUser) myPeerIdInput.value = currentUser.uid;
             msgInput.focus();
             loadContactsModal();
+            // Limpiar ventana de chat y mostrar mensajes anteriores? Podríamos cargar historial, pero por ahora solo nuevos.
         }
 
         function closeP2P() {
@@ -586,51 +480,12 @@
 
             const destino = remotePeerIdInput.value.trim();
             if (!destino) {
-                alert("⚠️ Debes ingresar el ID remoto");
+                alert("⚠️ Debes ingresar el UID del destinatario");
                 return;
             }
 
             msgInput.value = '';
-            addMessage(texto, 'pending');
-            enviarMensajeFirebase(texto, destino, 'text');
-            if (!idRemoto) idRemoto = destino;
-            actualizarEstado('connected');
-        }
-
-        function conectarLlamada() {
-            const destino = remotePeerIdInput.value.trim();
-            
-            if (!destino) {
-                alert('⚠️ Debes escribir o pegar el ID del otro dispositivo en la casilla "ID Remoto" antes de llamar.');
-                remotePeerIdInput.focus();
-                return;
-            }
-            
-            if (destino === miId) {
-                alert("No puedes llamarte a ti mismo");
-                return;
-            }
-            
-            idRemoto = destino;
-            enviarPresencia(destino);
-        }
-
-        function reiniciarId() {
-            if (confirm('¿Generar un nuevo ID? Esto reiniciará la conexión.')) {
-                const nuevoId = generarNuevoId();
-                localStorage.setItem(ID_KEY, nuevoId);
-                miId = nuevoId;
-                myPeerIdInput.value = nuevoId;
-                // Reconfigurar escucha sin reiniciar la app
-                if (inboxRef && escuchando) {
-                    inboxRef.off();
-                }
-                configurarEscucha();
-                logP2P(`🔄 ID cambiado a: ${nuevoId}`);
-                actualizarEstado('idle');
-                idRemoto = null;
-                remotePeerIdInput.value = '';
-            }
+            enviarMensajeFirebase(texto, destino);
         }
 
         // ========== PESTAÑAS MODAL ==========
@@ -642,7 +497,7 @@
             if (tab === 'contacts') loadContactsModal();
         }
 
-        // ========== CONTACTOS MODAL ==========
+        // ========== CONTACTOS MODAL (igual) ==========
         function loadContactsModal() {
             contacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '[]');
             renderContactsModal();
@@ -740,7 +595,7 @@
             }
         }
 
-        // ========== FUNCIONES DE POSTS Y RSS ==========
+        // ========== FUNCIONES DE POSTS Y RSS (sin cambios) ==========
         const LOCAL_STORAGE_KEY = 'arbolapp_posts_v1';
         let currentFeedTab = 'my-posts';
 
@@ -980,8 +835,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadMyPosts();
             loadContacts();
-            const idGuardado = obtenerIdDispositivo();
-            iniciarFirebase(idGuardado);
+            iniciarFirebase();
 
             if (msgInput) {
                 msgInput.addEventListener('keydown', (e) => {
